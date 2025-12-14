@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import MetadataFetcher from './components/MetadataFetcher'
 import Editor from './components/Editor'
 import GitHubIntegration from './components/GitHubIntegration'
-import { parseSacStory, formatStoryForGitHub, type ParsedStoryContent } from './utils/sacParser'
+import { parseSacStory, formatStoryForGitHub, extractStoryDetails, type ParsedStoryContent } from './utils/sacParser'
 import './index.css'
 
 function App() {
@@ -20,7 +20,17 @@ function App() {
   // Load state from storage on mount
   useEffect(() => {
     chrome.storage.local.get(['parsedContent', 'editorContent', 'lastUrl', 'lastStoryId'], (result) => {
-      if (result.parsedContent) setParsedContent(result.parsedContent as ParsedStoryContent);
+      if (result.parsedContent) {
+        // Hydrate the parsed content with potential new fields (e.g. scripts) derived from the content
+        // This ensures that even if storage has old structure, we get the new details.
+        const stored = result.parsedContent as ParsedStoryContent;
+        if (stored.content) {
+          const extraDetails = extractStoryDetails(stored.content);
+          setParsedContent({ ...stored, ...extraDetails });
+        } else {
+          setParsedContent(stored);
+        }
+      }
       if (result.editorContent) setEditorContent(result.editorContent as string);
       if (result.lastUrl) setUrl(result.lastUrl as string);
       if (result.lastStoryId) setStoryId(result.lastStoryId as string);
@@ -198,6 +208,47 @@ function App() {
                 </div>
               )}
 
+              {parsedContent?.globalVars && parsedContent.globalVars.length > 0 && (
+                <div style={{ marginTop: "1rem" }}>
+                  <h3>Global Variables ({parsedContent.globalVars.length})</h3>
+                  <ul style={{ maxHeight: "150px", overflowY: "auto", paddingLeft: "1.2rem" }}>
+                    {parsedContent.globalVars.map(gv => (
+                      <li key={gv.id}>
+                        <strong>{gv.name}</strong> ({gv.type})
+                        {gv.description && <span style={{ display: "block", fontSize: "0.8em", color: "#666" }}>{gv.description}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {parsedContent?.scriptObjects && parsedContent.scriptObjects.length > 0 && (
+                <div style={{ marginTop: "1rem" }}>
+                  <h3>Script Objects ({parsedContent.scriptObjects.length})</h3>
+                  <ul style={{ maxHeight: "150px", overflowY: "auto", paddingLeft: "1.2rem" }}>
+                    {parsedContent.scriptObjects.map(so => (
+                      <li key={so.id}>
+                        <strong>{so.name}</strong>
+                        <span style={{ fontSize: "0.8em", color: "#666" }}> - {so.functions.length} functions</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {parsedContent?.events && parsedContent.events.length > 0 && (
+                <div style={{ marginTop: "1rem" }}>
+                  <h3>Events ({parsedContent.events.length})</h3>
+                  <ul style={{ maxHeight: "150px", overflowY: "auto", paddingLeft: "1.2rem" }}>
+                    {parsedContent.events.map((evt, idx) => (
+                      <li key={evt.widgetId + idx}>
+                        <strong>{evt.widgetName}</strong> - {evt.eventName}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               <div style={{ marginTop: "1rem", display: "flex", gap: "10px" }}>
                 <button
                   className="secondary-button"
@@ -209,6 +260,15 @@ function App() {
 
               {showJson && (
                 <div className="json-viewer-container">
+                  <div style={{ padding: "10px", background: "#f0f0f0", marginBottom: "10px", borderRadius: "4px" }}>
+                    <h4>Debug Info</h4>
+                    <p><strong>Pages:</strong> {parsedContent?.pages?.length ?? 0}</p>
+                    <p><strong>Global Vars:</strong> {parsedContent?.globalVars?.length ?? 0}</p>
+                    <p><strong>Script Objects:</strong> {parsedContent?.scriptObjects?.length ?? 0}</p>
+                    <p><strong>Events:</strong> {parsedContent?.events?.length ?? 0}</p>
+                    <p><strong>Entity Keys:</strong> {parsedContent?.content?.entities ? Object.keys(parsedContent.content.entities).join(", ") : "No entities found"}</p>
+                    <p><strong>Is Array?</strong> {Array.isArray(parsedContent?.content?.entities) ? "Yes" : "No"}</p>
+                  </div>
                   <pre className="json-viewer">
                     <code>{JSON.stringify(parsedContent?.content, null, 2)}</code>
                   </pre>

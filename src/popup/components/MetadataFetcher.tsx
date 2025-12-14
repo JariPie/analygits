@@ -1,21 +1,22 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 interface MetadataFetcherProps {
     onFetch: (url: string, storyId?: string) => void;
     isLoading: boolean;
-    initialUrl?: string;
-    initialStoryId?: string;
+    url: string;
+    storyId: string;
+    onUrlChange: (url: string) => void;
+    onStoryIdChange: (id: string) => void;
 }
 
-const MetadataFetcher: React.FC<MetadataFetcherProps> = ({ onFetch, isLoading, initialUrl = '', initialStoryId = '' }) => {
-    const [url, setUrl] = useState(initialUrl);
-    const [storyId, setStoryId] = useState(initialStoryId);
-
-    React.useEffect(() => {
-        if (initialUrl) setUrl(initialUrl);
-        if (initialStoryId) setStoryId(initialStoryId);
-    }, [initialUrl, initialStoryId]);
-
+const MetadataFetcher: React.FC<MetadataFetcherProps> = ({
+    onFetch,
+    isLoading,
+    url,
+    storyId,
+    onUrlChange,
+    onStoryIdChange
+}) => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (url) onFetch(url, storyId);
@@ -29,7 +30,7 @@ const MetadataFetcher: React.FC<MetadataFetcherProps> = ({ onFetch, isLoading, i
                         type="text"
                         placeholder="https://.../services/rest/epm/contentlib?tenant=5"
                         value={url}
-                        onChange={(e) => setUrl(e.target.value)}
+                        onChange={(e) => onUrlChange(e.target.value)}
                         className="url-input"
                         disabled={isLoading}
                     />
@@ -39,7 +40,7 @@ const MetadataFetcher: React.FC<MetadataFetcherProps> = ({ onFetch, isLoading, i
                         type="text"
                         placeholder="Story ID (e.g. 83D8...)"
                         value={storyId}
-                        onChange={(e) => setStoryId(e.target.value)}
+                        onChange={(e) => onStoryIdChange(e.target.value)}
                         className="url-input"
                         disabled={isLoading}
                     />

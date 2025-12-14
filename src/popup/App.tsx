@@ -10,14 +10,48 @@ function App() {
   const [editorContent, setEditorContent] = useState<string>('<p>Enter SAC Story URL to begin...</p>')
   const [parsedContent, setParsedContent] = useState<ParsedStoryContent | null>(null)
   const [error, setError] = useState<string | null>(null)
-  // State to control visibility of heavy content
+  const [url, setUrl] = useState('');
+  const [storyId, setStoryId] = useState('');
+
   // State to control visibility of heavy content
   const [showJson, setShowJson] = useState(false);
-  const [initialUrl, setInitialUrl] = useState('');
-  const [initialStoryId, setInitialStoryId] = useState('');
+  const [isStorageLoaded, setIsStorageLoaded] = useState(false);
 
-  // Auto-detect SAC Story from current tab
+  // Load state from storage on mount
   useEffect(() => {
+    chrome.storage.local.get(['parsedContent', 'editorContent', 'lastUrl', 'lastStoryId'], (result) => {
+      if (result.parsedContent) setParsedContent(result.parsedContent as ParsedStoryContent);
+      if (result.editorContent) setEditorContent(result.editorContent as string);
+      if (result.lastUrl) setUrl(result.lastUrl as string);
+      if (result.lastStoryId) setStoryId(result.lastStoryId as string);
+      setIsStorageLoaded(true);
+    });
+  }, []);
+
+  // Save inputs to storage whenever they change
+  useEffect(() => {
+    if (isStorageLoaded) {
+      chrome.storage.local.set({ lastUrl: url, lastStoryId: storyId });
+    }
+  }, [url, storyId, isStorageLoaded]);
+
+  // Save content to storage whenever it changes
+  useEffect(() => {
+    if (isStorageLoaded) {
+      if (parsedContent) {
+        chrome.storage.local.set({ parsedContent });
+      }
+      if (editorContent) {
+        chrome.storage.local.set({ editorContent });
+      }
+    }
+  }, [parsedContent, editorContent, isStorageLoaded]);
+
+
+  // Auto-detect SAC Story from current tab - Only run after storage is loaded to verify if we need to override
+  useEffect(() => {
+    if (!isStorageLoaded) return;
+
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const currentTab = tabs[0];
       if (currentTab && currentTab.url) {
@@ -35,20 +69,30 @@ function App() {
         }
 
         if (storyIdParam) {
-          setInitialStoryId(storyIdParam);
+          // Logic: Only update inputs if the detected ID is different from what we loaded/have.
+          // This means if we are on Story B, and we have Story A stored, we update inputs to Story B.
+          // But we don't necessarily clear the fetched content of Story A until the user clicks Fetch.
+          setStoryId((prev) => {
+            if (prev !== storyIdParam) {
+              return storyIdParam || "";
+            }
+            return prev;
+          });
 
           // Construct the Tenant URL
-          // Default to tenant=5 if not found.
           const tenantId = urlObj.searchParams.get("tenant") || "5";
-
-          // Note: The API likely resides on the same origin.
-          // Attempting to use the origin detected.
           const apiBase = `${urlObj.origin}/sap/fpa/services/rest/epm/contentlib?tenant=${tenantId}`;
-          setInitialUrl(apiBase);
+
+          setUrl((prev) => {
+            if (prev !== apiBase) {
+              return apiBase;
+            }
+            return prev;
+          });
         }
       }
     });
-  }, []);
+  }, [isStorageLoaded]);
 
   const handleFetch = async (url: string, storyId?: string) => {
     setLoading(true)
@@ -124,8 +168,10 @@ function App() {
           <MetadataFetcher
             onFetch={handleFetch}
             isLoading={loading}
-            initialUrl={initialUrl}
-            initialStoryId={initialStoryId}
+            url={url}
+            storyId={storyId}
+            onUrlChange={setUrl}
+            onStoryIdChange={setStoryId}
           />
           {error && <div className="error-message">{error}</div>}
         </div>

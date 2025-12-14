@@ -67,3 +67,20 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
         return true;
     }
 });
+
+// Listener for tab updates to detect SAC Stories
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete' && tab.url) {
+        // Check for Story ID in query param OR in hash path (e.g. /s2/ID/)
+        const isStory = tab.url.includes("storyId=") ||
+            (tab.url.includes("/story2&/s2/") && tab.url.includes("sap/fpa/ui")) ||
+            (tab.url.includes("mode=present") && tab.url.includes("/story"));
+
+        if (isStory) {
+            chrome.action.setBadgeText({ text: "SAC", tabId: tabId });
+            chrome.action.setBadgeBackgroundColor({ color: "#0a6ed1", tabId: tabId });
+        } else {
+            chrome.action.setBadgeText({ text: "", tabId: tabId });
+        }
+    }
+});

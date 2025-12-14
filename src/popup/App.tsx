@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import MetadataFetcher from './components/MetadataFetcher'
 import Editor from './components/Editor'
 import GitHubIntegration from './components/GitHubIntegration'
@@ -11,7 +11,44 @@ function App() {
   const [parsedContent, setParsedContent] = useState<ParsedStoryContent | null>(null)
   const [error, setError] = useState<string | null>(null)
   // State to control visibility of heavy content
+  // State to control visibility of heavy content
   const [showJson, setShowJson] = useState(false);
+  const [initialUrl, setInitialUrl] = useState('');
+  const [initialStoryId, setInitialStoryId] = useState('');
+
+  // Auto-detect SAC Story from current tab
+  useEffect(() => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const currentTab = tabs[0];
+      if (currentTab && currentTab.url) {
+        const urlObj = new URL(currentTab.url);
+
+        // Check for storyId in URL parameters
+        let storyIdParam = urlObj.searchParams.get("storyId");
+
+        // Check hash for modern SAC URL format: .../app.html#/story2&/s2/<ID>/?...
+        if (!storyIdParam && urlObj.hash) {
+          const hashMatch = urlObj.hash.match(/\/s2\/([A-Z0-9]+)/);
+          if (hashMatch && hashMatch[1]) {
+            storyIdParam = hashMatch[1];
+          }
+        }
+
+        if (storyIdParam) {
+          setInitialStoryId(storyIdParam);
+
+          // Construct the Tenant URL
+          // Default to tenant=5 if not found.
+          const tenantId = urlObj.searchParams.get("tenant") || "5";
+
+          // Note: The API likely resides on the same origin.
+          // Attempting to use the origin detected.
+          const apiBase = `${urlObj.origin}/sap/fpa/services/rest/epm/contentlib?tenant=${tenantId}`;
+          setInitialUrl(apiBase);
+        }
+      }
+    });
+  }, []);
 
   const handleFetch = async (url: string, storyId?: string) => {
     setLoading(true)
@@ -84,7 +121,12 @@ function App() {
 
       <main>
         <div className="card">
-          <MetadataFetcher onFetch={handleFetch} isLoading={loading} />
+          <MetadataFetcher
+            onFetch={handleFetch}
+            isLoading={loading}
+            initialUrl={initialUrl}
+            initialStoryId={initialStoryId}
+          />
           {error && <div className="error-message">{error}</div>}
         </div>
 

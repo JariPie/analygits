@@ -3,11 +3,18 @@ import React, { useState } from 'react';
 interface MetadataFetcherProps {
     onFetch: (url: string, storyId?: string) => void;
     isLoading: boolean;
+    initialUrl?: string;
+    initialStoryId?: string;
 }
 
-const MetadataFetcher: React.FC<MetadataFetcherProps> = ({ onFetch, isLoading }) => {
-    const [url, setUrl] = useState('');
-    const [storyId, setStoryId] = useState('');
+const MetadataFetcher: React.FC<MetadataFetcherProps> = ({ onFetch, isLoading, initialUrl = '', initialStoryId = '' }) => {
+    const [url, setUrl] = useState(initialUrl);
+    const [storyId, setStoryId] = useState(initialStoryId);
+
+    React.useEffect(() => {
+        if (initialUrl) setUrl(initialUrl);
+        if (initialStoryId) setStoryId(initialStoryId);
+    }, [initialUrl, initialStoryId]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

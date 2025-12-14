@@ -4,7 +4,8 @@
     "version": "1.0.0",
     "description": "Fetch SAP OData metadata and generate documentation.",
     "permissions": [
-        "storage"
+        "storage",
+        "tabs"
     ],
     "host_permissions": [
         "https://*/*",

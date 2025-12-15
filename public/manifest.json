@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "SAP Documentation Tool",
+    "name": "AnalyGits",
     "version": "1.0.0",
     "description": "Fetch SAP OData metadata and generate documentation.",
     "permissions": [
@@ -11,13 +11,25 @@
         "https://*/*",
         "http://*/*"
     ],
+    "icons": {
+        "16": "icons/AnalyGits16x16.png",
+        "32": "icons/AnalyGits32x32.png",
+        "48": "icons/AnalyGits48x48.png",
+        "128": "icons/AnalyGits128x128.png"
+    },
     "background": {
         "service_worker": "background.js",
         "type": "module"
     },
     "action": {
         "default_popup": "src/popup/index.html",
-        "default_title": "SAP Docs"
+        "default_title": "AnalyGits",
+        "default_icon": {
+            "16": "icons/AnalyGits16x16.png",
+            "32": "icons/AnalyGits32x32.png",
+            "48": "icons/AnalyGits48x48.png",
+            "128": "icons/AnalyGits128x128.png"
+        }
     },
     "content_security_policy": {
         "extension_pages": "script-src 'self'; object-src 'self'"

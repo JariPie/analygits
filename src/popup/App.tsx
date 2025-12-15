@@ -168,8 +168,11 @@ function App() {
 
   return (
     <div className="app-container">
-      <header className="app-header">
-        <h1>SAP SAC Story Fetcher</h1>
+      <header className="app-header" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+          <img src="/AnalyGits.png" alt="AnalyGits Logo" style={{ height: "48px" }} />
+          <h1 style={{ margin: 0 }}>AnalyGits</h1>
+        </div>
         <p className="subtitle">Fetch and document SAC Stories</p>
       </header>
 

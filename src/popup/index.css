@@ -26,22 +26,34 @@ body {
 }
 
 .app-header {
-    text-align: center;
+    position: relative;
     margin-bottom: 2rem;
+    padding: 1rem 0;
 }
 
-.app-header h1 {
-    margin: 0;
-    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-size: 2rem;
-    font-weight: 800;
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.header-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.app-logo {
+    height: 80px;
 }
 
 .subtitle {
     color: var(--text-light);
-    margin-top: 0.5rem;
+    margin: 0;
+    font-size: 0.95rem;
+    text-align: center;
 }
 
 .card {
@@ -565,4 +577,74 @@ body {
 .primary-button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+/* ============================================
+   GitHub Status Badge (Header)
+   ============================================ */
+
+.github-status-badge {
+    position: absolute;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.github-logo-container {
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.github-logo-container:hover {
+    transform: scale(1.1);
+}
+
+.github-logo {
+    width: 32px;
+    height: 32px;
+    color: var(--text);
+    transition: color 0.2s;
+}
+
+.github-logo-container:hover .github-logo {
+    color: var(--primary);
+}
+
+.status-indicator {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--card-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    color: white;
+    font-weight: bold;
+}
+
+.status-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.disconnect-btn {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.disconnect-btn:hover {
+    background: #fee2e2;
+    color: var(--error);
 }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import MetadataFetcher from './components/MetadataFetcher'
 import Editor from './components/Editor'
 import GitHubPanel from './components/GitHubPanel'
+import GitHubStatusBadge from './components/GitHubStatusBadge'
 import { parseSacStory, extractStoryDetails, type ParsedStoryContent } from './utils/sacParser'
 import './index.css'
 
@@ -168,12 +169,14 @@ function App() {
 
   return (
     <div className="app-container">
-      <header className="app-header" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-          <img src="/AnalyGits.png" alt="AnalyGits Logo" style={{ height: "48px" }} />
-          <h1 style={{ margin: 0 }}>AnalyGits</h1>
+      <header className="app-header">
+        <div className="header-content">
+          <div className="header-center">
+            <img src="/AnalyGits.png" alt="AnalyGits Logo" className="app-logo" />
+            <p className="subtitle">Fetch and document SAC Stories</p>
+          </div>
+          <GitHubStatusBadge />
         </div>
-        <p className="subtitle">Fetch and document SAC Stories</p>
       </header>
 
       <main>
@@ -277,9 +280,9 @@ function App() {
                   </pre>
                 </div>
               )}
-
-              <GitHubPanel parsedContent={parsedContent} />
             </div>
+
+            <GitHubPanel parsedContent={parsedContent} />
 
             <div className="card">
               <div className="card-header">

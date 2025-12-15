@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import {
     generateSessionId,
     getInstallUrl,
-    pollHandshake,
     getInstallationToken,
     revokeDeviceToken,
     type Repository,
@@ -58,16 +57,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Load from storage on mount
     useEffect(() => {
         chrome.storage.local.get([STORAGE_KEY], (result) => {
+            console.log('🔍 Loading auth from storage, key:', STORAGE_KEY);
+            console.log('📦 Raw result:', result);
+
             if (result[STORAGE_KEY]) {
                 const stored = result[STORAGE_KEY] as Partial<AuthState>;
+                console.log('✅ Found stored data:', stored);
+                console.log('🔑 Has deviceToken?', !!stored.deviceToken);
+
+                const newStatus = stored.deviceToken ? 'connected' : 'idle';
+                console.log('📊 Setting status to:', newStatus);
+
                 setState(prev => ({
                     ...prev,
                     deviceToken: stored.deviceToken || null,
                     deviceTokenExpiry: stored.deviceTokenExpiry || null,
                     selectedRepo: stored.selectedRepo || null,
                     branch: stored.branch || config.DEFAULT_BRANCH,
-                    status: stored.deviceToken ? 'connected' : 'idle',
+                    status: newStatus,
                 }));
+            } else {
+                console.log('❌ No data found for key:', STORAGE_KEY);
             }
         });
     }, []);
@@ -75,13 +85,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Persist to storage on change
     useEffect(() => {
         if (state.deviceToken || state.selectedRepo) {
+            const dataToSave = {
+                deviceToken: state.deviceToken,
+                deviceTokenExpiry: state.deviceTokenExpiry,
+                selectedRepo: state.selectedRepo,
+                branch: state.branch,
+            };
+
+            console.log('💾 Saving to storage, key:', STORAGE_KEY);
+            console.log('💾 Data:', dataToSave);
+
             chrome.storage.local.set({
-                [STORAGE_KEY]: {
-                    deviceToken: state.deviceToken,
-                    deviceTokenExpiry: state.deviceTokenExpiry,
-                    selectedRepo: state.selectedRepo,
-                    branch: state.branch,
-                },
+                [STORAGE_KEY]: dataToSave,
+            }, () => {
+                console.log('✅ Save complete');
+                // Verify it was saved
+                chrome.storage.local.get([STORAGE_KEY], (result) => {
+                    console.log('🔍 Verification read:', result);
+                });
             });
         }
     }, [state.deviceToken, state.deviceTokenExpiry, state.selectedRepo, state.branch]);
@@ -97,43 +118,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         setState(prev => ({ ...prev, status: 'polling', error: null }));
 
-        // Start polling with exponential backoff
-        let attempt = 0;
-        let delay = config.HANDSHAKE_POLL_INTERVAL_MS;
-
-        const poll = async () => {
-            if (attempt >= config.HANDSHAKE_POLL_MAX_ATTEMPTS) {
-                setState(prev => ({ ...prev, status: 'error', error: 'Handshake timed out. Please try again.' }));
-                return;
+        // Send message to background script to start polling
+        // This ensures polling continues even if the popup closes
+        chrome.runtime.sendMessage({
+            type: "START_AUTH_POLL",
+            sessionId
+        }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.error("Failed to start polling in background:", chrome.runtime.lastError);
+                setState(prev => ({ ...prev, status: 'error', error: 'Failed to start background polling.' }));
+            } else {
+                console.log("🚀 Background polling started:", response);
             }
-
-            try {
-                const response = await pollHandshake(sessionId);
-
-                if (response.status === 'ready' && response.deviceToken) {
-                    setState(prev => ({
-                        ...prev,
-                        status: 'connected',
-                        deviceToken: response.deviceToken!,
-                        deviceTokenExpiry: response.expiration || null,
-                        error: null,
-                    }));
-                    sessionIdRef.current = null;
-                    return;
-                }
-
-                // Still pending, schedule next poll with backoff
-                attempt++;
-                if (attempt > 20) {
-                    delay = Math.min(delay * 1.5, 10000); // Exponential backoff after 20 attempts
-                }
-                pollingRef.current = window.setTimeout(poll, delay);
-            } catch (err: any) {
-                setState(prev => ({ ...prev, status: 'error', error: err.message }));
-            }
-        };
-
-        poll();
+        });
     }, []);
 
     // --- Logout ---
@@ -213,6 +210,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (pollingRef.current) {
                 clearTimeout(pollingRef.current);
             }
+        };
+    }, []);
+
+    // Listen for storage changes (e.g. from background script)
+    useEffect(() => {
+        const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+            if (areaName === 'local' && changes[STORAGE_KEY]) {
+                const newValue = changes[STORAGE_KEY].newValue as Partial<AuthState>;
+                console.log('🔄 Storage changed from background:', newValue);
+
+                if (newValue) {
+                    setState(prev => ({
+                        ...prev,
+                        deviceToken: newValue.deviceToken || null,
+                        deviceTokenExpiry: newValue.deviceTokenExpiry || null,
+                        selectedRepo: newValue.selectedRepo || null,
+                        branch: newValue.branch || config.DEFAULT_BRANCH,
+                        status: newValue.deviceToken ? 'connected' : 'idle',
+                        error: null // Clear any errors on successful update
+                    }));
+                }
+            }
+        };
+
+        chrome.storage.onChanged.addListener(handleStorageChange);
+        return () => {
+            chrome.storage.onChanged.removeListener(handleStorageChange);
         };
     }, []);
 

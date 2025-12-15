@@ -1,19 +1,18 @@
 // Configuration for the AnalyGits Extension
-// These values should be set by the user or via environment variables during build.
 
 export const config = {
-    // Your GitHub App Slug (from the app's settings URL: github.com/apps/<slug>)
-    GITHUB_APP_SLUG: 'analygits', // Replace with your actual app slug
+    // GitHub App Slug
+    GITHUB_APP_SLUG: 'analygitsapp',
 
-    // Your backend base URL (the service handling token exchange)
-    BACKEND_BASE_URL: 'https://your-backend.example.com', // Replace with your actual backend URL
+    // Backend base URL (deployed on Coolify)
+    BACKEND_BASE_URL: 'https://api.analygits.com',
 
     // Default branch for commits (can be changed later per-repo)
     DEFAULT_BRANCH: 'main',
 
-    // Polling configuration for the handshake
+    // Polling configuration for the handshake (5 minutes max)
     HANDSHAKE_POLL_INTERVAL_MS: 2000,
-    HANDSHAKE_POLL_MAX_ATTEMPTS: 60,
+    HANDSHAKE_POLL_MAX_ATTEMPTS: 150, // 5 minutes (2s * 150)
 };
 
 export type Config = typeof config;

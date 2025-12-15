@@ -86,7 +86,7 @@ export async function pollHandshake(sessionId: string): Promise<HandshakePollRes
 
 export async function getInstallationToken(deviceToken: string): Promise<{ accessToken: string; validUntil: string; newDeviceToken?: string }> {
     const response = await fetch(`${config.BACKEND_BASE_URL}/api/auth/token`, {
-        method: 'GET',
+        method: 'POST',
         headers: {
             'Authorization': `Bearer ${deviceToken}`,
         },

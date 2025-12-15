@@ -96,7 +96,20 @@ export async function getInstallationToken(deviceToken: string): Promise<{ acces
         if (response.status === 401) {
             throw new Error('Device token is invalid or expired. Please re-authenticate.');
         }
-        throw new Error(`Failed to get installation token: ${response.statusText}`);
+
+        const errorText = await response.text();
+        console.error('Failed to get installation token. Status:', response.status, 'Body:', errorText);
+
+        let errorMessage = errorText;
+        try {
+            const json = JSON.parse(errorText);
+            errorMessage = json.message || json.error || JSON.stringify(json);
+        } catch (e) {
+            // Not JSON, use raw text or status text
+            errorMessage = errorText || response.statusText;
+        }
+
+        throw new Error(`Failed to get installation token: ${errorMessage}`);
     }
 
     const data: TokenResponse = await response.json();

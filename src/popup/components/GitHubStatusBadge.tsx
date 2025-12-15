@@ -1,12 +1,16 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
+import { config } from '../config';
 
 const GitHubStatusBadge: React.FC = () => {
     const { status, startLogin, logout } = useAuth();
 
     const handleClick = () => {
         console.log('🖱️ GitHub badge clicked, current status:', status);
-        if (status === 'idle' || status === 'error') {
+        if (status === 'connected') {
+            const url = `https://github.com/apps/${config.GITHUB_APP_SLUG}`;
+            window.open(url, '_blank');
+        } else if (status === 'idle' || status === 'error') {
             console.log('▶️ Calling startLogin()');
             startLogin();
         } else {
@@ -18,12 +22,15 @@ const GitHubStatusBadge: React.FC = () => {
         switch (status) {
             case 'idle':
                 return { text: 'Connect', color: '#64748b', icon: '○' };
+            case 'starting':
             case 'polling':
                 return { text: 'Connecting...', color: '#f59e0b', icon: '◐' };
             case 'connected':
                 return { text: 'Connected', color: '#16a34a', icon: '●' };
             case 'error':
                 return { text: 'Error', color: '#dc2626', icon: '✕' };
+            default:
+                return { text: 'Connect', color: '#64748b', icon: '○' };
         }
     };
 

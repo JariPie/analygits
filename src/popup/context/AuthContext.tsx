@@ -1,7 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
-    generateSessionId,
-    getInstallUrl,
     getInstallationToken,
     revokeDeviceToken,
     type Repository,
@@ -10,7 +8,7 @@ import { config } from '../config';
 
 // --- Types ---
 
-type AuthStatus = 'idle' | 'polling' | 'connected' | 'error';
+type AuthStatus = 'idle' | 'starting' | 'polling' | 'connected' | 'error';
 
 interface AuthState {
     status: AuthStatus;
@@ -52,7 +50,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     const pollingRef = useRef<number | null>(null);
-    const sessionIdRef = useRef<string | null>(null);
 
     // Load from storage on mount
     useEffect(() => {
@@ -109,26 +106,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // --- Start Login Flow ---
     const startLogin = useCallback(() => {
-        const sessionId = generateSessionId();
-        sessionIdRef.current = sessionId;
+        // Delegate entire flow to background
+        setState(prev => ({ ...prev, status: 'starting', error: null }));
 
-        // Open GitHub install URL
-        const installUrl = getInstallUrl(sessionId);
-        window.open(installUrl, '_blank');
-
-        setState(prev => ({ ...prev, status: 'polling', error: null }));
-
-        // Send message to background script to start polling
-        // This ensures polling continues even if the popup closes
-        chrome.runtime.sendMessage({
-            type: "START_AUTH_POLL",
-            sessionId
-        }, (response) => {
+        chrome.runtime.sendMessage({ type: "GITHUB_CONNECT_START" }, (response) => {
             if (chrome.runtime.lastError) {
-                console.error("Failed to start polling in background:", chrome.runtime.lastError);
-                setState(prev => ({ ...prev, status: 'error', error: 'Failed to start background polling.' }));
+                console.error("Failed to start connect flow:", chrome.runtime.lastError);
+                setState(prev => ({ ...prev, status: 'error', error: 'Failed to notify background worker.' }));
             } else {
-                console.log("🚀 Background polling started:", response);
+                console.log("🚀 Background flow started:", response);
             }
         });
     }, []);
@@ -158,7 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             error: null,
         });
 
-        chrome.storage.local.remove([STORAGE_KEY]);
+        chrome.storage.local.remove([STORAGE_KEY, 'githubConnectState']);
     }, [state.deviceToken]);
 
     // --- Get Access Token (with caching and rotation handling) ---
@@ -213,13 +199,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
     }, []);
 
-    // Listen for storage changes (e.g. from background script)
+    // Listen for storage changes & messages from background
     useEffect(() => {
+        // 1. Storage changes (Persistence & Cross-context)
         const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
-            if (areaName === 'local' && changes[STORAGE_KEY]) {
-                const newValue = changes[STORAGE_KEY].newValue as Partial<AuthState>;
-                console.log('🔄 Storage changed from background:', newValue);
+            if (areaName !== 'local') return;
 
+            // Auth Success
+            if (changes[STORAGE_KEY]) {
+                const newValue = changes[STORAGE_KEY].newValue as Partial<AuthState>;
+                console.log('🔄 Storage changed (Auth):', newValue);
                 if (newValue) {
                     setState(prev => ({
                         ...prev,
@@ -228,17 +217,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         selectedRepo: newValue.selectedRepo || null,
                         branch: newValue.branch || config.DEFAULT_BRANCH,
                         status: newValue.deviceToken ? 'connected' : 'idle',
-                        error: null // Clear any errors on successful update
+                        error: null
                     }));
+                }
+            }
+
+            // Connection Status (Polling/Waiting)
+            if (changes['githubConnectState']) {
+                const connectState = changes['githubConnectState'].newValue as any;
+                console.log('🔄 Storage changed (ConnectState):', connectState);
+                if (connectState && !state.deviceToken) {
+                    // Only update status if we aren't already connected
+                    // Map background status to UI status
+                    // "starting" | "waiting-for-install" | "polling" -> "polling" (UI simplified)
+                    let uiStatus: AuthStatus = 'idle';
+                    if (['starting', 'waiting-for-install', 'polling'].includes(connectState.status)) {
+                        uiStatus = 'polling';
+                    } else if (connectState.status === 'connected') {
+                        uiStatus = 'connected';
+                    } else if (connectState.status === 'error') {
+                        uiStatus = 'error';
+                    }
+
+                    setState(prev => {
+                        // Don't downgrade 'connected' to 'polling' if race condition
+                        if (prev.status === 'connected') return prev;
+                        return { ...prev, status: uiStatus, error: connectState.lastError || null };
+                    });
+                }
+            }
+        };
+
+        // 2. Direct Messages (Real-time feedback)
+        const handleMessage = (message: any) => {
+            if (message.type === "GITHUB_CONNECT_STATUS") {
+                const payload = message.payload as any;
+                console.log("📩 Received Connect Status:", payload);
+                // Similar mapping logic
+                if (!state.deviceToken) {
+                    let uiStatus: AuthStatus = 'idle';
+                    if (['starting', 'waiting-for-install', 'polling'].includes(payload.status)) {
+                        uiStatus = 'polling';
+                    } else if (payload.status === 'connected') {
+                        uiStatus = 'connected';
+                    } else if (payload.status === 'error') {
+                        uiStatus = 'error';
+                    }
+
+                    setState(prev => {
+                        if (prev.status === 'connected') return prev;
+                        return { ...prev, status: uiStatus, error: payload.lastError || null };
+                    });
                 }
             }
         };
 
         chrome.storage.onChanged.addListener(handleStorageChange);
+        chrome.runtime.onMessage.addListener(handleMessage);
+
         return () => {
             chrome.storage.onChanged.removeListener(handleStorageChange);
+            chrome.runtime.onMessage.removeListener(handleMessage);
         };
-    }, []);
+    }, [state.deviceToken]);
 
     const value: AuthContextValue = {
         ...state,

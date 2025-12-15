@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import MetadataFetcher from './components/MetadataFetcher'
 import Editor from './components/Editor'
-import GitHubIntegration from './components/GitHubIntegration'
-import { parseSacStory, formatStoryForGitHub, extractStoryDetails, type ParsedStoryContent } from './utils/sacParser'
+import GitHubPanel from './components/GitHubPanel'
+import { parseSacStory, extractStoryDetails, type ParsedStoryContent } from './utils/sacParser'
 import './index.css'
 
 function App() {
@@ -278,10 +278,7 @@ function App() {
                 </div>
               )}
 
-              <GitHubIntegration
-                defaultPath={`stories/${parsedContent?.name ? parsedContent.name.replace(/\s+/g, "_") : "story"}.md`}
-                contentGenerator={() => formatStoryForGitHub(parsedContent!)}
-              />
+              <GitHubPanel parsedContent={parsedContent} />
             </div>
 
             <div className="card">

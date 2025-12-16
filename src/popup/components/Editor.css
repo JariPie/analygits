@@ -1,50 +1,214 @@
-.editor-container {
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  overflow: hidden;
-  background: white;
-  margin-top: 1rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.editor-toolbar {
-  background: #f8fafc;
-  padding: 0.5rem;
-  border-bottom: 1px solid #e2e8f0;
+.commit-message-editor-container {
   display: flex;
+  flex-direction: column;
   gap: 0.5rem;
+  width: 100%;
 }
 
-.editor-toolbar button {
-  padding: 0.25rem 0.5rem;
+.editor-wrapper {
+  position: relative;
+  border: 1px solid #ced4da;
   border-radius: 4px;
-  border: 1px solid transparent;
-  background: transparent;
-  cursor: pointer;
-  font-size: 0.875rem;
-  color: #475569;
+  background: #fff;
+  min-height: 200px;
+  /* Increased for better UX */
 }
 
-.editor-toolbar button:hover {
-  background: #e2e8f0;
+.commit-editor-content {
+  padding: 12px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  outline: none;
+  min-height: 180px;
 }
 
-.editor-toolbar button.is-active {
-  background: #cbd5e1;
-  color: #1e293b;
+.commit-editor-content .ProseMirror {
+  outline: none;
+  min-height: 160px;
+}
+
+.commit-editor-content .ProseMirror:focus {
+  outline: none;
+}
+
+/* --- Placeholders --- */
+/* TipTap's Placeholder extension adds .is-empty and data-placeholder */
+.commit-editor-content p.is-empty::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* For inline nodes - use inline-block for clickable area */
+.commit-type,
+.commit-scope,
+.commit-summary {
+  display: inline-block;
+  min-width: 50px;
+  /* Ensures clickable area even when empty */
+  min-height: 1.2em;
+  vertical-align: baseline;
+  cursor: text;
+  border-radius: 3px;
+  padding: 0 2px;
+  transition: background-color 0.15s ease;
+}
+
+.commit-type:focus,
+.commit-scope:focus,
+.commit-summary:focus,
+.commit-type:focus-within,
+.commit-scope:focus-within,
+.commit-summary:focus-within {
+  background-color: rgba(3, 102, 214, 0.08);
+  outline: none;
+}
+
+/* Placeholder styling for inline nodes */
+.commit-type.is-empty::before,
+.commit-scope.is-empty::before,
+.commit-summary.is-empty::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  display: inline;
+  pointer-events: none;
+}
+
+.commit-footer.is-empty::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  display: inline;
+  pointer-events: none;
+}
+
+/* --- Nodes --- */
+
+.commit-header {
+  background: #f8f9fa;
+  border-bottom: 1px dashed #dee2e6;
+  padding: 8px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+}
+
+.commit-type {
+  color: #0366d6;
   font-weight: 600;
 }
 
-.editor-content {
-  padding: 1rem;
-  min-height: 200px;
-  outline: none;
+/* Type shows colon after it when it has content */
+.commit-type:not(.is-empty)::after {
+  content: '';
+  margin-right: 0;
 }
 
-.ProseMirror {
-  outline: none;
+.commit-scope {
+  color: #6a737d;
 }
 
-.ProseMirror p {
-  margin: 0.5em 0;
+/* Smart Punctuation - only show parens when scope has text */
+.commit-scope:not(.is-empty)::before {
+  content: '(';
+  color: #959da5;
+}
+
+.commit-scope:not(.is-empty)::after {
+  content: ')';
+  color: #959da5;
+}
+
+/* Colon separator between header parts and summary */
+.commit-summary::before {
+  content: ': ';
+  color: #959da5;
+}
+
+.commit-summary {
+  font-weight: 500;
+  color: #24292e;
+  flex: 1;
+  /* Take remaining space */
+}
+
+.commit-body {
+  display: block;
+  margin-top: 8px;
+  min-height: 80px;
+  /* Ensure visual height for "User Notes" area */
+}
+
+.commit-footer {
+  display: block;
+  margin-top: 8px;
+  color: #586069;
+  border-top: 1px solid #eee;
+  padding-top: 4px;
+}
+
+
+
+/* --- Ruler --- */
+.ruler-72 {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(8px + 72ch);
+  border-right: 1px dashed rgba(255, 0, 0, 0.2);
+  pointer-events: none;
+}
+
+/* --- Status & Feedback --- */
+
+.validation-status.valid {
+  color: #22863a;
+  font-size: 0.85em;
+  margin-left: auto;
+}
+
+.validation-status.invalid {
+  color: #cb2431;
+  font-size: 0.85em;
+  margin-left: auto;
+}
+
+.validation-feedback {
+  background: #fafbfc;
+  border: 1px solid #e1e4e8;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 12px;
+}
+
+.feedback-item.error {
+  color: #cb2431;
+}
+
+.feedback-item.warning {
+  color: #b08800;
+}
+
+.editor-help {
+  color: #6a737d;
+  font-size: 11px;
+  margin-left: 4px;
+}
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.editor-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: #24292e;
 }

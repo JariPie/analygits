@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import RepoPicker from './RepoPicker';
 import DiffViewer from './DiffViewer';
-import CommitMessageEditor, { formatCommitMessage } from './CommitMessageEditor';
+import CommitMessageEditor from './CommitMessageEditor';
 import {
     type FileDiff,
     getRepoTree,
@@ -24,11 +24,25 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
 
     const [diffs, setDiffs] = useState<FileDiff[]>([]);
     const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
-    const [commitMessage, setCommitMessage] = useState({ title: '', body: '' });
+    const [commitMessage, setCommitMessage] = useState('');
+    const [isCommitValid, setIsCommitValid] = useState(false);
     const [diffLoading, setDiffLoading] = useState(false);
     const [pushLoading, setPushLoading] = useState(false);
     const [pushStatus, setPushStatus] = useState<{ success: number; failed: number } | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    // --- Scope Suggestion ---
+    const suggestedScope = useMemo(() => {
+        if (selectedPaths.length === 0) return undefined;
+        // Simple heuristic: check first path
+        const first = selectedPaths[0];
+        const parts = first.split('/');
+        // e.g. src/components/Foo.tsx -> scope 'components' or 'src'?
+        // e.g. stories/MyStory/Page1 -> scope 'MyStory'?
+        if (parts.length > 2) return parts[parts.length - 2];
+        return undefined;
+    }, [selectedPaths]);
+
 
     // --- Fetch & Diff ---
     const handleFetchDiff = useCallback(async () => {
@@ -155,9 +169,9 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
     const handlePush = useCallback(async () => {
         if (!selectedRepo || diffs.length === 0) return;
 
-        const message = formatCommitMessage(commitMessage.title, commitMessage.body);
-        if (!message) {
-            setError('Commit title is required.');
+        // Message is now single string from editor
+        if (!commitMessage || !isCommitValid) {
+            setError('Please provide a valid commit message.');
             return;
         }
 
@@ -184,7 +198,7 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
                             selectedRepo.owner.login,
                             selectedRepo.name,
                             diff.path,
-                            message,
+                            commitMessage,
                             diff.sha!,
                             branch
                         );
@@ -201,7 +215,7 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
                             selectedRepo.name,
                             diff.path,
                             content,
-                            message,
+                            commitMessage,
                             diff.sha,
                             branch
                         );
@@ -224,7 +238,7 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
         } finally {
             setPushLoading(false);
         }
-    }, [selectedRepo, diffs, selectedPaths, commitMessage, branch, getAccessToken, parsedContent, handleFetchDiff]);
+    }, [selectedRepo, diffs, selectedPaths, commitMessage, isCommitValid, branch, getAccessToken, parsedContent, handleFetchDiff]);
 
     if (status !== 'connected') {
         return null;
@@ -253,12 +267,18 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
                             <DiffViewer diffs={diffs} onFileSelect={setSelectedPaths} />
 
                             <div className="commit-section">
-                                <CommitMessageEditor onCommitMessageChange={setCommitMessage} />
+                                <CommitMessageEditor
+                                    onCommitMessageChange={(msg, valid) => {
+                                        setCommitMessage(msg);
+                                        setIsCommitValid(valid);
+                                    }}
+                                    suggestedScope={suggestedScope}
+                                />
 
                                 <button
                                     className="primary-button push-button"
                                     onClick={handlePush}
-                                    disabled={pushLoading || !commitMessage.title.trim() || selectedPaths.length === 0}
+                                    disabled={pushLoading || !isCommitValid || selectedPaths.length === 0}
                                 >
                                     {pushLoading ? 'Pushing...' : `Push ${selectedPaths.length} file(s)`}
                                 </button>

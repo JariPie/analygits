@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import MetadataFetcher from './components/MetadataFetcher'
-import Editor from './components/Editor'
 import GitHubPanel from './components/GitHubPanel'
 import GitHubStatusBadge from './components/GitHubStatusBadge'
 import { parseSacStory, extractStoryDetails, type ParsedStoryContent } from './utils/sacParser'
@@ -8,7 +7,6 @@ import './index.css'
 
 function App() {
   const [loading, setLoading] = useState(false)
-  const [editorContent, setEditorContent] = useState<string>('<p>Enter SAC Story URL to begin...</p>')
   const [parsedContent, setParsedContent] = useState<ParsedStoryContent | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [url, setUrl] = useState('');
@@ -20,7 +18,7 @@ function App() {
 
   // Load state from storage on mount
   useEffect(() => {
-    chrome.storage.local.get(['parsedContent', 'editorContent', 'lastUrl', 'lastStoryId'], (result) => {
+    chrome.storage.local.get(['parsedContent', 'lastUrl', 'lastStoryId'], (result) => {
       if (result.parsedContent) {
         // Hydrate the parsed content with potential new fields (e.g. scripts) derived from the content
         // This ensures that even if storage has old structure, we get the new details.
@@ -32,7 +30,6 @@ function App() {
           setParsedContent(stored);
         }
       }
-      if (result.editorContent) setEditorContent(result.editorContent as string);
       if (result.lastUrl) setUrl(result.lastUrl as string);
       if (result.lastStoryId) setStoryId(result.lastStoryId as string);
       setIsStorageLoaded(true);
@@ -52,11 +49,8 @@ function App() {
       if (parsedContent) {
         chrome.storage.local.set({ parsedContent });
       }
-      if (editorContent) {
-        chrome.storage.local.set({ editorContent });
-      }
     }
-  }, [parsedContent, editorContent, isStorageLoaded]);
+  }, [parsedContent, isStorageLoaded]);
 
 
   // Auto-detect SAC Story from current tab - Only run after storage is loaded to verify if we need to override
@@ -147,21 +141,9 @@ function App() {
       const parsed = parseSacStory(response.data);
       setParsedContent(parsed);
 
-      // Don't put the massive JSON in the Tiptap editor to avoid crashes
-      setEditorContent(`
-        <p><strong>Story Name:</strong> ${parsed.name}</p>
-        <p><strong>Description:</strong> ${parsed.description}</p>
-        <p><em>Add your notes here...</em></p>
-      `);
-
-      // Removed immediate generation of GitHub content to prevent freezing
-      // const mdContent = formatStoryForGitHub(parsed);
-      // setGithubContent(mdContent);
-
     } catch (err: any) {
       console.error(err);
       setError(err.toString());
-      setEditorContent(`<p class="error">Error: ${err.message}</p>`);
     } finally {
       setLoading(false)
     }
@@ -284,13 +266,7 @@ function App() {
 
             <GitHubPanel parsedContent={parsedContent} />
 
-            <div className="card">
-              <div className="card-header">
-                <h2>User Notes</h2>
-                {/* Export button could export combined content or just the story */}
-              </div>
-              <Editor content={editorContent} onChange={setEditorContent} />
-            </div>
+
 
 
           </div>

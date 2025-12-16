@@ -1,4 +1,8 @@
 import { Node, mergeAttributes } from '@tiptap/core';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
+
+const CommitTypeEmptyPluginKey = new PluginKey('commitTypeEmpty');
 
 export const CommitType = Node.create({
     name: 'commitType',
@@ -34,6 +38,34 @@ export const CommitType = Node.create({
         ];
     },
 
+    addProseMirrorPlugins() {
+        return [
+            new Plugin({
+                key: CommitTypeEmptyPluginKey,
+                props: {
+                    decorations: (state) => {
+                        const decorations: Decoration[] = [];
+
+                        state.doc.descendants((node, pos) => {
+                            if (node.type.name === 'commitType') {
+                                const isEmpty = node.textContent.length === 0;
+                                if (isEmpty) {
+                                    decorations.push(
+                                        Decoration.node(pos, pos + node.nodeSize, {
+                                            class: 'is-empty',
+                                        })
+                                    );
+                                }
+                            }
+                        });
+
+                        return DecorationSet.create(state.doc, decorations);
+                    },
+                },
+            }),
+        ];
+    },
+
     addKeyboardShortcuts() {
         return {
             Tab: () => {
@@ -56,4 +88,3 @@ export const CommitType = Node.create({
         };
     },
 });
-

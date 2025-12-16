@@ -95,6 +95,7 @@ function findTypeSuggestionMatch(config: TriggerConfig) {
     const typeSegmentEnd = typeNodeStart + typeSegment.length;
 
     // Cursor must be inside the type segment (not in scope/summary)
+    // Use >= typeNodeStart to allow cursor at start of empty type segment
     if (cursorPos < typeNodeStart || cursorPos > typeSegmentEnd) {
         return null;
     }
@@ -116,10 +117,11 @@ function findTypeSuggestionMatch(config: TriggerConfig) {
         range: {
             // Replace the whole current type segment when choosing an item
             from: typeNodeStart,
-            to: typeSegmentEnd,
+            // Ensure range.to > range.from even when empty, to keep suggestion active
+            to: Math.max(typeSegmentEnd, typeNodeStart + 1),
         },
         query,
-        text: query,
+        text: query.length === 0 ? '\u200b' : query,
     };
 }
 

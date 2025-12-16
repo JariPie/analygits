@@ -40,6 +40,7 @@ export const CommitEditorExtensions = [
 
     Placeholder.configure({
         includeChildren: true,
+        showOnlyCurrent: false,
         placeholder: ({ node }) => {
             if (node.type.name === 'commitType') {
                 return 'type';

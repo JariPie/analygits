@@ -23,16 +23,16 @@ const GitHubStatusBadge: React.FC = () => {
     const getStatusInfo = () => {
         switch (status) {
             case 'idle':
-                return { text: t('statusBadge.connect'), color: '#64748b', icon: '○' };
+                return { color: '#64748b', icon: '○' };
             case 'starting':
             case 'polling':
-                return { text: t('statusBadge.connecting'), color: '#f59e0b', icon: '◐' };
+                return { color: '#f59e0b', icon: '◐' };
             case 'connected':
-                return { text: t('statusBadge.connected'), color: '#16a34a', icon: '●' };
+                return { color: '#16a34a', icon: '●' };
             case 'error':
-                return { text: t('common.error'), color: '#dc2626', icon: '✕' };
+                return { color: '#dc2626', icon: '✕' };
             default:
-                return { text: t('statusBadge.connect'), color: '#64748b', icon: '○' };
+                return { color: '#64748b', icon: '○' };
         }
     };
 
@@ -52,14 +52,13 @@ const GitHubStatusBadge: React.FC = () => {
                     {statusInfo.icon}
                 </div>
             </div>
-            <div className="status-text" style={{ color: statusInfo.color }}>
-                {statusInfo.text}
-            </div>
-            {status === 'connected' && (
-                <button className="disconnect-btn" onClick={(e) => { e.stopPropagation(); logout(); }}>
-                    ✕
-                </button>
-            )}
+            {
+                status === 'connected' && (
+                    <button className="disconnect-btn" onClick={(e) => { e.stopPropagation(); logout(); }}>
+                        ✕
+                    </button>
+                )
+            }
         </div>
     );
 };

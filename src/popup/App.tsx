@@ -154,12 +154,12 @@ function App() {
   return (
     <div className="app-container">
       <header className="app-header">
+        <GitHubStatusBadge />
         <div className="header-content">
           <div className="header-center">
-            <img src="/AnalyGits.png" alt="AnalyGits Logo" className="app-logo" />
-            <p className="subtitle">{t('app.subtitle')}</p>
+            <img src="/App_Text.png" alt="AnalyGits" className="app-logo" />
+            {/* Subtitle removed as requested */}
           </div>
-          <GitHubStatusBadge />
         </div>
       </header>
 
@@ -170,8 +170,6 @@ function App() {
             isLoading={loading}
             url={url}
             storyId={storyId}
-            onUrlChange={setUrl}
-            onStoryIdChange={setStoryId}
           />
           {error && <div className="error-message">{error}</div>}
         </div>

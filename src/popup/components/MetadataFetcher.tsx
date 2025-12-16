@@ -6,17 +6,13 @@ interface MetadataFetcherProps {
     isLoading: boolean;
     url: string;
     storyId: string;
-    onUrlChange: (url: string) => void;
-    onStoryIdChange: (id: string) => void;
 }
 
 const MetadataFetcher: React.FC<MetadataFetcherProps> = ({
     onFetch,
     isLoading,
     url,
-    storyId,
-    onUrlChange,
-    onStoryIdChange
+    storyId
 }) => {
     const { t } = useTranslation();
     const handleSubmit = (e: React.FormEvent) => {
@@ -27,27 +23,7 @@ const MetadataFetcher: React.FC<MetadataFetcherProps> = ({
     return (
         <div className="metadata-fetcher">
             <form onSubmit={handleSubmit} className="fetch-form">
-                <div className="input-group">
-                    <input
-                        type="text"
-                        placeholder={t('meta.placeholders.url')}
-                        value={url}
-                        onChange={(e) => onUrlChange(e.target.value)}
-                        className="url-input"
-                        disabled={isLoading}
-                    />
-                </div>
-                <div className="input-group">
-                    <input
-                        type="text"
-                        placeholder={t('meta.placeholders.storyId')}
-                        value={storyId}
-                        onChange={(e) => onStoryIdChange(e.target.value)}
-                        className="url-input"
-                        disabled={isLoading}
-                    />
-                </div>
-                <button type="submit" disabled={isLoading || !url} className="fetch-button">
+                <button type="submit" disabled={isLoading || !url} className="fetch-button primary-button">
                     {isLoading ? t('meta.actions.fetching') : t('meta.actions.fetch')}
                 </button>
             </form>

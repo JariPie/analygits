@@ -20,7 +20,7 @@ body {
 }
 
 .app-container {
-    padding: 1.5rem;
+    padding: 0.5rem 1.5rem 1.5rem 1.5rem;
     max-width: 800px;
     margin: 0 auto;
 }
@@ -28,7 +28,7 @@ body {
 .app-header {
     position: relative;
     margin-bottom: 2rem;
-    padding: 1rem 0;
+    padding: 0.5rem 0;
 }
 
 .header-content {
@@ -46,15 +46,12 @@ body {
 }
 
 .app-logo {
-    height: 80px;
+    height: auto;
+    max-width: 400px;
+    width: 100%;
 }
 
-.subtitle {
-    color: var(--text-light);
-    margin: 0;
-    font-size: 0.95rem;
-    text-align: center;
-}
+/* Subtitle removed */
 
 .card {
     background: var(--card-bg);
@@ -589,6 +586,7 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    z-index: 20;
 }
 
 .github-logo-container {
@@ -628,10 +626,7 @@ body {
     font-weight: bold;
 }
 
-.status-text {
-    font-size: 0.75rem;
-    font-weight: 600;
-}
+/* status-text removed */
 
 .disconnect-btn {
     background: none;

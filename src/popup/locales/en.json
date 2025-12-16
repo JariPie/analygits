@@ -51,6 +51,7 @@
         },
         "actions": {
             "fetch": "Fetch Story",
+            "fetchWithName": "Fetch Story {{name}}",
             "fetching": "Fetching..."
         }
     },

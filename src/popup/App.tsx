@@ -13,6 +13,7 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [url, setUrl] = useState('');
   const [storyId, setStoryId] = useState('');
+  const [storyName, setStoryName] = useState('');
 
   // State to control visibility of heavy content
   const [showJson, setShowJson] = useState(false);
@@ -20,7 +21,7 @@ function App() {
 
   // Load state from storage on mount
   useEffect(() => {
-    chrome.storage.local.get(['parsedContent', 'lastUrl', 'lastStoryId'], (result) => {
+    chrome.storage.local.get(['parsedContent', 'lastUrl', 'lastStoryId', 'lastStoryName'], (result) => {
       if (result.parsedContent) {
         // Hydrate the parsed content with potential new fields (e.g. scripts) derived from the content
         // This ensures that even if storage has old structure, we get the new details.
@@ -34,6 +35,7 @@ function App() {
       }
       if (result.lastUrl) setUrl(result.lastUrl as string);
       if (result.lastStoryId) setStoryId(result.lastStoryId as string);
+      if (result.lastStoryName) setStoryName(result.lastStoryName as string);
       setIsStorageLoaded(true);
     });
   }, []);
@@ -42,8 +44,9 @@ function App() {
   useEffect(() => {
     if (isStorageLoaded) {
       chrome.storage.local.set({ lastUrl: url, lastStoryId: storyId });
+      chrome.storage.local.set({ lastUrl: url, lastStoryId: storyId, lastStoryName: storyName });
     }
-  }, [url, storyId, isStorageLoaded]);
+  }, [url, storyId, storyName, isStorageLoaded]);
 
   // Save content to storage whenever it changes
   useEffect(() => {
@@ -76,6 +79,17 @@ function App() {
         }
 
         if (storyIdParam) {
+          // Detect story name from tab title if available
+          if (currentTab.title) {
+            // Basic heuristic: SAC titles often are "Story Name" or "Story Name - SAP Analytics Cloud" or "Story Name - Stories"
+            // Depending on how clean we want it, we can just use the full title or strip common suffixes.
+            let cleanTitle = currentTab.title;
+            cleanTitle = cleanTitle.replace(" - SAP Analytics Cloud", "");
+            cleanTitle = cleanTitle.replace(" - Stories", "");
+            cleanTitle = cleanTitle.trim();
+            setStoryName(cleanTitle);
+          }
+
           // Logic: Only update inputs if the detected ID is different from what we loaded/have.
           // This means if we are on Story B, and we have Story A stored, we update inputs to Story B.
           // But we don't necessarily clear the fetched content of Story A until the user clicks Fetch.
@@ -170,6 +184,7 @@ function App() {
             isLoading={loading}
             url={url}
             storyId={storyId}
+            storyName={storyName}
           />
           {error && <div className="error-message">{error}</div>}
         </div>

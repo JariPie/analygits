@@ -51,6 +51,7 @@
         },
         "actions": {
             "fetch": "Story abrufen",
+            "fetchWithName": "Story {{name}} abrufen",
             "fetching": "Abrufen..."
         }
     },

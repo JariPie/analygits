@@ -6,13 +6,15 @@ interface MetadataFetcherProps {
     isLoading: boolean;
     url: string;
     storyId: string;
+    storyName?: string;
 }
 
 const MetadataFetcher: React.FC<MetadataFetcherProps> = ({
     onFetch,
     isLoading,
     url,
-    storyId
+    storyId,
+    storyName
 }) => {
     const { t } = useTranslation();
     const handleSubmit = (e: React.FormEvent) => {
@@ -24,7 +26,12 @@ const MetadataFetcher: React.FC<MetadataFetcherProps> = ({
         <div className="metadata-fetcher">
             <form onSubmit={handleSubmit} className="fetch-form">
                 <button type="submit" disabled={isLoading || !url} className="fetch-button primary-button">
-                    {isLoading ? t('meta.actions.fetching') : t('meta.actions.fetch')}
+                    {isLoading
+                        ? t('meta.actions.fetching')
+                        : (storyName
+                            ? t('meta.actions.fetchWithName', { name: storyName })
+                            : t('meta.actions.fetch'))
+                    }
                 </button>
             </form>
         </div>

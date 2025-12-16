@@ -10,6 +10,7 @@ import {
     deleteFile,
     getFileContent,
 } from '../services/githubService';
+import { getDeepestSharedScope } from '../utils/scopeCalculator';
 import { buildVirtualStoryTree } from '../../diff/adapter';
 import { diffTrees } from '../../diff/diff';
 import type { RepoTree } from '../../diff/types';
@@ -33,14 +34,7 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
 
     // --- Scope Suggestion ---
     const suggestedScope = useMemo(() => {
-        if (selectedPaths.length === 0) return undefined;
-        // Simple heuristic: check first path
-        const first = selectedPaths[0];
-        const parts = first.split('/');
-        // e.g. src/components/Foo.tsx -> scope 'components' or 'src'?
-        // e.g. stories/MyStory/Page1 -> scope 'MyStory'?
-        if (parts.length > 2) return parts[parts.length - 2];
-        return undefined;
+        return getDeepestSharedScope(selectedPaths);
     }, [selectedPaths]);
 
 

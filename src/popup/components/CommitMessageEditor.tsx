@@ -19,6 +19,8 @@ const CommitMessageEditor: React.FC<CommitMessageEditorProps> = ({
         warnings: [],
     });
 
+    const lastAutoSuggestScope = React.useRef<string | undefined>(suggestedScope);
+
     const editor = useEditor({
         extensions: CommitEditorExtensions,
         content: {
@@ -59,12 +61,50 @@ const CommitMessageEditor: React.FC<CommitMessageEditorProps> = ({
         },
     });
 
-    // Effect to insert scope if provided later (or initially if editor wasn't ready)
-    // Note: This is simplified; we might want to only set it if empty.
+
+
+    // Update scope when suggestedScope changes, BUT only if the user hasn't manually changed it
     useEffect(() => {
-        if (editor && suggestedScope) {
-            // Find scope node and update it? 
-            // For now, allow user to type.
+        if (!editor || suggestedScope === undefined) return;
+
+        const doc = editor.state.doc;
+        let scopeNode: any = null;
+        let scopePos = -1;
+
+        doc.descendants((node, pos) => {
+            if (node.type.name === 'commitScope') {
+                scopeNode = node;
+                scopePos = pos;
+                return false;
+            }
+        });
+
+        if (scopeNode && scopePos !== -1) {
+            const currentText = scopeNode.textContent;
+
+            // Allow update if:
+            // 1. Current text is empty
+            // 2. Current text matches what we previously auto-suggested (user hasn't touched it)
+            const isUnchangedByUser = currentText === '' || currentText === lastAutoSuggestScope.current;
+
+            if (isUnchangedByUser && currentText !== suggestedScope) {
+                // Update the scope content
+                editor.chain()
+                    .command(({ tr, dispatch }) => {
+                        if (dispatch) {
+                            // We need to replace the content of the scope node
+                            // The scope node starts at scopePos, content at scopePos + 1
+                            const start = scopePos + 1;
+                            const end = scopePos + scopeNode.nodeSize - 1;
+
+                            tr.insertText(suggestedScope, start, end);
+                        }
+                        return true;
+                    })
+                    .run();
+
+                lastAutoSuggestScope.current = suggestedScope;
+            }
         }
     }, [suggestedScope, editor]);
 

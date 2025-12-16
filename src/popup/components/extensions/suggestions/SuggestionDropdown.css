@@ -1,0 +1,65 @@
+/* Suggestion Dropdown - VS Code style */
+.suggestion-dropdown {
+    background: #1e1e1e;
+    border: 1px solid #454545;
+    border-radius: 4px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    min-width: 200px;
+    max-width: 320px;
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: 1000;
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+}
+
+.suggestion-item {
+    padding: 6px 12px;
+    cursor: pointer;
+    color: #d4d4d4;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.suggestion-item.selected {
+    background: #094771;
+    color: #fff;
+}
+
+.suggestion-item:hover:not(.selected) {
+    background: #2a2d2e;
+}
+
+.suggestion-label {
+    font-weight: 500;
+}
+
+.suggestion-description {
+    color: #808080;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.suggestion-item.selected .suggestion-description {
+    color: #a0c0e0;
+}
+
+/* Scrollbar styling */
+.suggestion-dropdown::-webkit-scrollbar {
+    width: 8px;
+}
+
+.suggestion-dropdown::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+.suggestion-dropdown::-webkit-scrollbar-thumb {
+    background: #424242;
+    border-radius: 4px;
+}
+
+.suggestion-dropdown::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

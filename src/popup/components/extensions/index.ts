@@ -5,6 +5,7 @@ import { CommitSummary } from './CommitSummary';
 import { CommitBody } from './CommitBody';
 import { CommitFooter } from './CommitFooter';
 import { CommitDocument } from './CommitDocument';
+import { TypeSuggestion, ScopeSuggestion, FooterSuggestion } from './suggestions';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 
@@ -19,6 +20,11 @@ export const CommitEditorExtensions = [
     CommitSummary,
     CommitBody,
     CommitFooter,
+
+    // Suggestions (IDE-style autocomplete)
+    TypeSuggestion,
+    ScopeSuggestion,
+    FooterSuggestion,
 
     // Essentials
     StarterKit.configure({

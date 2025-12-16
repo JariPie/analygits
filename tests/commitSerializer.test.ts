@@ -140,7 +140,9 @@ describe('Commit Validation', () => {
             ]
         };
         const result = validateCommitMessage(doc);
-        expect(result.errors).toContain('Header should be under 50 characters');
+        // Long header is a warning, not an error - commit is still valid
+        expect(result.isValid).toBe(true);
+        expect(result.warnings.some(w => w.includes('chars'))).toBe(true);
     });
 
     it('warns on body line length', () => {

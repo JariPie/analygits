@@ -1,17 +1,23 @@
 import { ReactRenderer } from '@tiptap/react';
-import { computePosition, offset, shift, size } from '@floating-ui/dom';
+import { autoUpdate, computePosition, offset, shift, size } from '@floating-ui/dom';
 import type { VirtualElement } from '@floating-ui/dom';
 import { SuggestionDropdown, type SuggestionDropdownRef } from './SuggestionDropdown';
 
 const MAX_Z_INDEX = 2147483647;
 const VIEWPORT_PADDING = 8;
+const DROPDOWN_MAX_HEIGHT = 280;
 
 export function createSuggestionRenderer() {
     let component: ReactRenderer<SuggestionDropdownRef> | null = null;
     let floatingEl: HTMLDivElement | null = null;
+    let cleanup: (() => void) | null = null;
 
-    // Prevent async computePosition calls from applying out of order
-    let positionSeq = 0;
+    // We store the virtual element persistently so we can update its rect
+    // whenever the editor selection changes or autoUpdate triggers.
+    const virtualEl: VirtualElement = {
+        getBoundingClientRect: () => new DOMRect(0, 0, 0, 0),
+        contextElement: undefined,
+    };
 
     const getCaretRect = (editor: any): DOMRect | null => {
         try {
@@ -21,7 +27,6 @@ export function createSuggestionRenderer() {
             const pos = view.state.selection.from;
             const coords = view.coordsAtPos(pos);
 
-            // coords are viewport-based already
             const width = Math.max(0, coords.right - coords.left);
             const height = Math.max(0, coords.bottom - coords.top);
             return new DOMRect(coords.left, coords.top, width, height);
@@ -33,11 +38,15 @@ export function createSuggestionRenderer() {
     const updatePosition = async (editor: any) => {
         if (!floatingEl) return;
 
+        // update the virtual element rect based on current caret
         const rect = getCaretRect(editor);
         if (!rect) {
             floatingEl.style.visibility = 'hidden';
             return;
         }
+
+        virtualEl.getBoundingClientRect = () => rect;
+        virtualEl.contextElement = editor?.view?.dom;
 
         const visible =
             rect.bottom > 0 &&
@@ -52,34 +61,26 @@ export function createSuggestionRenderer() {
 
         floatingEl.style.visibility = 'visible';
 
-        const virtualEl: VirtualElement = {
-            getBoundingClientRect: () => rect,
-            contextElement: editor?.view?.dom,
-        };
-
-        const seq = ++positionSeq;
-
         const { x, y } = await computePosition(virtualEl, floatingEl, {
             strategy: 'fixed',
             placement: 'bottom-start',
             middleware: [
                 offset(4),
-                // IMPORTANT: remove flip() to prevent “ping-pong” in a tight popup
                 shift({ padding: VIEWPORT_PADDING }),
                 size({
                     padding: VIEWPORT_PADDING,
                     apply({ availableHeight, elements }) {
+                        // Clamp max height to the smaller of viewport space or design max height
+                        const maxH = Math.min(DROPDOWN_MAX_HEIGHT, Math.max(0, availableHeight - VIEWPORT_PADDING));
                         Object.assign(elements.floating.style, {
-                            maxHeight: `${Math.max(0, availableHeight - VIEWPORT_PADDING)}px`,
-                            overflowY: 'auto',
+                            maxHeight: `${maxH}px`,
+                            // Remove overflowY: 'auto' from here to prevent double scrollbars
+                            // Scrolling should be handled by the inner container
                         });
                     },
                 }),
             ],
         });
-
-        // Ignore out-of-order async results
-        if (seq !== positionSeq) return;
 
         Object.assign(floatingEl.style, {
             transform: `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`,
@@ -93,25 +94,45 @@ export function createSuggestionRenderer() {
                 editor: props.editor,
             });
 
+            // Ensure the React wrapper fills the container so inner scroll works
+            if (component.element) {
+                component.element.style.height = '100%';
+            }
+
             floatingEl = document.createElement('div');
             floatingEl.setAttribute('data-suggestion-dropdown', 'true');
-            floatingEl.style.cssText = `position: fixed; z-index: ${MAX_Z_INDEX}; left: 0; top: 0; will-change: transform;`;
-            floatingEl.style.visibility = 'hidden';
+            // Add display: flex to ensure children can fill height properly
+            floatingEl.style.cssText = `position: fixed; z-index: ${MAX_Z_INDEX}; left: 0; top: 0; will-change: transform; visibility: hidden; display: flex; flex-direction: column;`;
 
             floatingEl.appendChild(component.element as HTMLElement);
             document.body.appendChild(floatingEl);
 
-            // Wait a frame so the dropdown has real dimensions before positioning
-            requestAnimationFrame(() => updatePosition(props.editor));
+            // 1. Initial position update
+            // 2. Setup autoUpdate for scroll/resize
+            const update = () => {
+                updatePosition(props.editor);
+            };
+
+            // Run once immediately (async inside)
+            update();
+
+            // Start autoUpdate
+            cleanup = autoUpdate(virtualEl, floatingEl, update, {
+                animationFrame: true,
+            });
         },
 
         onUpdate: (props: any) => {
             component?.updateProps({ items: props.items, command: props.command });
-            requestAnimationFrame(() => updatePosition(props.editor));
+            // autoUpdate handles position, but we should update the specific rect
+            // immediately in case the caret moved without scrolling
+            updatePosition(props.editor);
         },
 
         onKeyDown: (props: { event: KeyboardEvent }) => {
             if (props.event.key === 'Escape') {
+                cleanup?.();
+                cleanup = null;
                 floatingEl?.remove();
                 component?.destroy();
                 floatingEl = null;
@@ -122,6 +143,8 @@ export function createSuggestionRenderer() {
         },
 
         onExit: () => {
+            cleanup?.();
+            cleanup = null;
             floatingEl?.remove();
             component?.destroy();
             floatingEl = null;

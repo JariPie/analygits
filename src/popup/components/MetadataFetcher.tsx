@@ -28,7 +28,7 @@ const MetadataFetcher: React.FC<MetadataFetcherProps> = ({
                 <div className="input-group">
                     <input
                         type="text"
-                        placeholder="https://.../services/rest/epm/contentlib?tenant=5"
+                        placeholder="https://.../services/rest/epm/contentlib?"
                         value={url}
                         onChange={(e) => onUrlChange(e.target.value)}
                         className="url-input"

@@ -1,0 +1,116 @@
+{
+    "app": {
+        "title": "AnalyGits",
+        "subtitle": "SAC Stories abrufen und dokumentieren",
+        "storyFetchedSuccess": "Story erfolgreich abgerufen!",
+        "storyFetchedDefault": "Story abgerufen",
+        "sections": {
+            "pages": "Seiten ({{count}})",
+            "globalVars": "Globale Variablen ({{count}})",
+            "scriptObjects": "Skriptobjekte ({{count}})",
+            "events": "Ereignisse ({{count}})"
+        },
+        "actions": {
+            "showJson": "Rohes JSON anzeigen",
+            "hideJson": "Rohes JSON verbergen"
+        },
+        "debug": {
+            "title": "Debug-Info",
+            "pages": "Seiten:",
+            "globalVars": "Globale Var:",
+            "scriptObjects": "Skriptobjekte:",
+            "events": "Ereignisse:",
+            "entityKeys": "Entitätsschlüssel:",
+            "noEntities": "Keine Entitäten gefunden",
+            "isArray": "Ist Array?"
+        }
+    },
+    "github": {
+        "errors": {
+            "fetchFirst": "Bitte rufen Sie zuerst eine Story ab und wählen Sie ein Repository.",
+            "noContent": "Kein Inhalt in der Story zum Vergleichen gefunden.",
+            "noStoryPath": "Story-Pfad konnte nicht ermittelt werden.",
+            "invalidCommit": "Bitte geben Sie eine gültige Commit-Nachricht ein.",
+            "diffFailed": "Fehler beim Berechnen der Unterschiede.",
+            "contentNotFound": "Inhalt nicht gefunden für {{path}}"
+        },
+        "actions": {
+            "fetchDiff": "Abrufen & Vergleichen",
+            "pushing": "Pushen...",
+            "pushFiles": "{{count}} Datei(en) pushen"
+        },
+        "status": {
+            "pushResult": "{{success}} erfolgreich, {{failed}} fehlgeschlagen"
+        }
+    },
+    "meta": {
+        "labels": {},
+        "placeholders": {
+            "url": "https://.../services/rest/epm/contentlib?",
+            "storyId": "Story ID (z.B. 83D8...)"
+        },
+        "actions": {
+            "fetch": "Story abrufen",
+            "fetching": "Abrufen..."
+        }
+    },
+    "repo": {
+        "labels": {
+            "repository": "Repository",
+            "branch": "Branch"
+        },
+        "placeholders": {
+            "selectRepo": "Wählen Sie ein Repository...",
+            "branch": "main"
+        },
+        "status": {
+            "loadingRepos": "Lade Repositories..."
+        }
+    },
+    "statusBadge": {
+        "connect": "Verbinden",
+        "connecting": "Verbindet...",
+        "connected": "Verbunden",
+        "tooltip": {
+            "connected": "Mit GitHub verbunden",
+            "connect": "Klicken um GitHub zu verbinden"
+        }
+    },
+    "diff": {
+        "noChanges": "Keine Änderungen erkannt.",
+        "stats": {
+            "added": "{{count}} hinzugefügt",
+            "modified": "{{count}} geändert",
+            "deleted": "{{count}} gelöscht"
+        },
+        "labels": {
+            "old": "- Alt",
+            "new": "+ Neu"
+        },
+        "contentNotLoaded": "(Inhalt nicht geladen)",
+        "actions": {
+            "collapse": "Einklappen",
+            "expand": "Ausklappen"
+        }
+    },
+    "editor": {
+        "title": "Commit-Nachricht",
+        "status": {
+            "ready": "✅ Bereich",
+            "incomplete": "❌ Unvollständig"
+        },
+        "validation": {
+            "strictMode": "Strikter Modus: "
+        },
+        "help": "Tippe: <code>feat(scope): Zusammenfassung</code> dann Enter für Details."
+    },
+    "common": {
+        "loading": "Lädt...",
+        "error": "Fehler",
+        "fetch": "Abrufen",
+        "save": "Speichern",
+        "cancel": "Abbrechen",
+        "yes": "Ja",
+        "no": "Nein"
+    }
+}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface MetadataFetcherProps {
     onFetch: (url: string, storyId?: string) => void;
@@ -17,6 +18,7 @@ const MetadataFetcher: React.FC<MetadataFetcherProps> = ({
     onUrlChange,
     onStoryIdChange
 }) => {
+    const { t } = useTranslation();
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (url) onFetch(url, storyId);
@@ -28,7 +30,7 @@ const MetadataFetcher: React.FC<MetadataFetcherProps> = ({
                 <div className="input-group">
                     <input
                         type="text"
-                        placeholder="https://.../services/rest/epm/contentlib?"
+                        placeholder={t('meta.placeholders.url')}
                         value={url}
                         onChange={(e) => onUrlChange(e.target.value)}
                         className="url-input"
@@ -38,7 +40,7 @@ const MetadataFetcher: React.FC<MetadataFetcherProps> = ({
                 <div className="input-group">
                     <input
                         type="text"
-                        placeholder="Story ID (e.g. 83D8...)"
+                        placeholder={t('meta.placeholders.storyId')}
                         value={storyId}
                         onChange={(e) => onStoryIdChange(e.target.value)}
                         className="url-input"
@@ -46,7 +48,7 @@ const MetadataFetcher: React.FC<MetadataFetcherProps> = ({
                     />
                 </div>
                 <button type="submit" disabled={isLoading || !url} className="fetch-button">
-                    {isLoading ? 'Fetching...' : 'Fetch Story'}
+                    {isLoading ? t('meta.actions.fetching') : t('meta.actions.fetch')}
                 </button>
             </form>
         </div>

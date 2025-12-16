@@ -1,0 +1,116 @@
+{
+    "app": {
+        "title": "AnalyGits",
+        "subtitle": "Fetch and document SAC Stories",
+        "storyFetchedSuccess": "Story Fetched Successfully!",
+        "storyFetchedDefault": "Story Fetched",
+        "sections": {
+            "pages": "Pages ({{count}})",
+            "globalVars": "Global Variables ({{count}})",
+            "scriptObjects": "Script Objects ({{count}})",
+            "events": "Events ({{count}})"
+        },
+        "actions": {
+            "showJson": "Show Raw JSON",
+            "hideJson": "Hide Raw JSON"
+        },
+        "debug": {
+            "title": "Debug Info",
+            "pages": "Pages:",
+            "globalVars": "Global Vars:",
+            "scriptObjects": "Script Objects:",
+            "events": "Events:",
+            "entityKeys": "Entity Keys:",
+            "noEntities": "No entities found",
+            "isArray": "Is Array?"
+        }
+    },
+    "github": {
+        "errors": {
+            "fetchFirst": "Please fetch a story and select a repository first.",
+            "noContent": "No content found in story to diff.",
+            "noStoryPath": "Failed to determine story path.",
+            "invalidCommit": "Please provide a valid commit message.",
+            "diffFailed": "Failed to compute diffs.",
+            "contentNotFound": "Content not found for {{path}}"
+        },
+        "actions": {
+            "fetchDiff": "Fetch & Diff",
+            "pushing": "Pushing...",
+            "pushFiles": "Push {{count}} file(s)"
+        },
+        "status": {
+            "pushResult": "{{success}} succeeded, {{failed}} failed"
+        }
+    },
+    "meta": {
+        "labels": {},
+        "placeholders": {
+            "url": "https://.../services/rest/epm/contentlib?",
+            "storyId": "Story ID (e.g. 83D8...)"
+        },
+        "actions": {
+            "fetch": "Fetch Story",
+            "fetching": "Fetching..."
+        }
+    },
+    "repo": {
+        "labels": {
+            "repository": "Repository",
+            "branch": "Branch"
+        },
+        "placeholders": {
+            "selectRepo": "Select a repository...",
+            "branch": "main"
+        },
+        "status": {
+            "loadingRepos": "Loading repositories..."
+        }
+    },
+    "statusBadge": {
+        "connect": "Connect",
+        "connecting": "Connecting...",
+        "connected": "Connected",
+        "tooltip": {
+            "connected": "Connected to GitHub",
+            "connect": "Click to connect GitHub"
+        }
+    },
+    "diff": {
+        "noChanges": "No changes detected.",
+        "stats": {
+            "added": "{{count}} added",
+            "modified": "{{count}} modified",
+            "deleted": "{{count}} deleted"
+        },
+        "labels": {
+            "old": "- Old",
+            "new": "+ New"
+        },
+        "contentNotLoaded": "(Content not loaded)",
+        "actions": {
+            "collapse": "Collapse",
+            "expand": "Expand"
+        }
+    },
+    "editor": {
+        "title": "Commit Message",
+        "status": {
+            "ready": "✅ Ready",
+            "incomplete": "❌ Incomplete"
+        },
+        "validation": {
+            "strictMode": "Using strict mode: "
+        },
+        "help": "Type: <code>feat(scope): summary</code> then Enter for body."
+    },
+    "common": {
+        "loading": "Loading...",
+        "error": "Error",
+        "fetch": "Fetch",
+        "save": "Save",
+        "cancel": "Cancel",
+        "yes": "Yes",
+        "no": "No"
+    }
+}

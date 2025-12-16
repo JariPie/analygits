@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { CommitEditorExtensions } from './extensions';
 import { serializeCommitMessage, validateCommitMessage } from '../utils/commitSerializer';
@@ -13,6 +14,7 @@ const CommitMessageEditor: React.FC<CommitMessageEditorProps> = ({
     onCommitMessageChange,
     suggestedScope
 }) => {
+    const { t } = useTranslation();
     const [status, setStatus] = useState<{ isValid: boolean; errors: string[]; warnings: string[] }>({
         isValid: false,
         errors: [],
@@ -143,9 +145,9 @@ const CommitMessageEditor: React.FC<CommitMessageEditorProps> = ({
     return (
         <div className="commit-message-editor-container">
             <div className="editor-toolbar">
-                <span className="editor-title">Commit Message</span>
+                <span className="editor-title">{t('editor.title')}</span>
                 <span className={`validation-status ${status.isValid ? 'valid' : 'invalid'}`}>
-                    {status.isValid ? '✅ Ready' : '❌ Incomplete'}
+                    {status.isValid ? t('editor.status.ready') : t('editor.status.incomplete')}
                 </span>
             </div>
 
@@ -158,7 +160,7 @@ const CommitMessageEditor: React.FC<CommitMessageEditorProps> = ({
                 <div className="validation-feedback">
                     {status.errors.map((err, i) => (
                         <div key={`err-${i}`} className="feedback-item error">
-                            Using strict mode: {err}
+                            {t('editor.validation.strictMode')}{err}
                         </div>
                     ))}
                     {status.warnings.map((warn, i) => (
@@ -170,7 +172,7 @@ const CommitMessageEditor: React.FC<CommitMessageEditorProps> = ({
             )}
 
             <div className="editor-help">
-                <small>Type: <code>feat(scope): summary</code> then Enter for body.</small>
+                <small dangerouslySetInnerHTML={{ __html: t('editor.help') }} />
             </div>
         </div>
     );

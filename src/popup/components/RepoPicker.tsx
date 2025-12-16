@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { listRepositories, type Repository } from '../services/githubService';
 
@@ -7,6 +8,7 @@ interface RepoPickerProps {
 }
 
 const RepoPicker: React.FC<RepoPickerProps> = ({ onRepoChange }) => {
+    const { t } = useTranslation();
     const { status, getAccessToken, selectedRepo, selectRepo, branch, setBranch } = useAuth();
     const [repositories, setRepositories] = useState<Repository[]>([]);
     const [loading, setLoading] = useState(false);
@@ -64,9 +66,9 @@ const RepoPicker: React.FC<RepoPickerProps> = ({ onRepoChange }) => {
     return (
         <div className="repo-picker">
             <div className="form-group">
-                <label htmlFor="repo-select">Repository</label>
+                <label htmlFor="repo-select">{t('repo.labels.repository')}</label>
                 {loading ? (
-                    <div className="loading-spinner">Loading repositories...</div>
+                    <div className="loading-spinner">{t('repo.status.loadingRepos')}</div>
                 ) : error ? (
                     <div className="error-message">{error}</div>
                 ) : (
@@ -76,7 +78,7 @@ const RepoPicker: React.FC<RepoPickerProps> = ({ onRepoChange }) => {
                         onChange={handleRepoChange}
                         className="repo-select"
                     >
-                        <option value="">Select a repository...</option>
+                        <option value="">{t('repo.placeholders.selectRepo')}</option>
                         {repositories.map(repo => (
                             <option key={repo.id} value={repo.full_name}>
                                 {repo.full_name} {repo.private ? '🔒' : ''}
@@ -88,13 +90,13 @@ const RepoPicker: React.FC<RepoPickerProps> = ({ onRepoChange }) => {
 
             {selectedRepo && (
                 <div className="form-group">
-                    <label htmlFor="branch-input">Branch</label>
+                    <label htmlFor="branch-input">{t('repo.labels.branch')}</label>
                     <input
                         id="branch-input"
                         type="text"
                         value={branch}
                         onChange={handleBranchChange}
-                        placeholder="main"
+                        placeholder={t('repo.placeholders.branch')}
                         className="branch-input"
                     />
                 </div>

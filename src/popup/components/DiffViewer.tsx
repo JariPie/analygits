@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { type FileDiff } from '../services/githubService';
 
 interface DiffViewerProps {
@@ -7,6 +8,7 @@ interface DiffViewerProps {
 }
 
 const DiffViewer: React.FC<DiffViewerProps> = ({ diffs, onFileSelect }) => {
+    const { t } = useTranslation();
     const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
     const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set(diffs.map(d => d.path)));
 
@@ -57,7 +59,7 @@ const DiffViewer: React.FC<DiffViewerProps> = ({ diffs, onFileSelect }) => {
         if (diff.status === 'deleted') {
             return (
                 <div className="diff-content deleted-content">
-                    <pre>{diff.oldContent || '(Content not loaded)'}</pre>
+                    <pre>{diff.oldContent || t('diff.contentNotLoaded')}</pre>
                 </div>
             );
         }
@@ -75,13 +77,13 @@ const DiffViewer: React.FC<DiffViewerProps> = ({ diffs, onFileSelect }) => {
             <div className="diff-content">
                 {diff.oldContent && (
                     <div className="diff-section">
-                        <div className="diff-section-header" style={{ color: '#dc3545' }}>- Old</div>
+                        <div className="diff-section-header" style={{ color: '#dc3545' }}>{t('diff.labels.old')}</div>
                         <pre className="diff-old">{diff.oldContent}</pre>
                     </div>
                 )}
                 {diff.newContent && (
                     <div className="diff-section">
-                        <div className="diff-section-header" style={{ color: '#28a745' }}>+ New</div>
+                        <div className="diff-section-header" style={{ color: '#28a745' }}>{t('diff.labels.new')}</div>
                         <pre className="diff-new">{diff.newContent}</pre>
                     </div>
                 )}
@@ -92,7 +94,7 @@ const DiffViewer: React.FC<DiffViewerProps> = ({ diffs, onFileSelect }) => {
     if (diffs.length === 0) {
         return (
             <div className="diff-viewer empty">
-                <p>No changes detected.</p>
+                <p>{t('diff.noChanges')}</p>
             </div>
         );
     }
@@ -100,9 +102,9 @@ const DiffViewer: React.FC<DiffViewerProps> = ({ diffs, onFileSelect }) => {
     return (
         <div className="diff-viewer">
             <div className="diff-summary">
-                <span className="diff-count added">{diffs.filter(d => d.status === 'added').length} added</span>
-                <span className="diff-count modified">{diffs.filter(d => d.status === 'modified').length} modified</span>
-                <span className="diff-count deleted">{diffs.filter(d => d.status === 'deleted').length} deleted</span>
+                <span className="diff-count added">{t('diff.stats.added', { count: diffs.filter(d => d.status === 'added').length })}</span>
+                <span className="diff-count modified">{t('diff.stats.modified', { count: diffs.filter(d => d.status === 'modified').length })}</span>
+                <span className="diff-count deleted">{t('diff.stats.deleted', { count: diffs.filter(d => d.status === 'deleted').length })}</span>
             </div>
 
             <div className="diff-list">
@@ -123,7 +125,7 @@ const DiffViewer: React.FC<DiffViewerProps> = ({ diffs, onFileSelect }) => {
                             <button
                                 className="diff-expand-btn"
                                 onClick={() => toggleExpand(diff.path)}
-                                aria-label={expandedPaths.has(diff.path) ? 'Collapse' : 'Expand'}
+                                aria-label={expandedPaths.has(diff.path) ? t('diff.actions.collapse') : t('diff.actions.expand')}
                             >
                                 {expandedPaths.has(diff.path) ? '▼' : '▶'}
                             </button>

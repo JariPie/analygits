@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import RepoPicker from './RepoPicker';
 import DiffViewer from './DiffViewer';
@@ -21,6 +22,7 @@ interface GitHubPanelProps {
 }
 
 const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
+    const { t } = useTranslation();
     const { status, getAccessToken, selectedRepo, branch } = useAuth();
 
     const [diffs, setDiffs] = useState<FileDiff[]>([]);
@@ -41,7 +43,7 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
     // --- Fetch & Diff ---
     const handleFetchDiff = useCallback(async () => {
         if (!parsedContent || !selectedRepo) {
-            setError('Please fetch a story and select a repository first.');
+            setError(t('github.errors.fetchFirst'));
             return;
         }
 
@@ -70,12 +72,12 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
             // HACK: inspect one local file to guess base path or reuse logic
             // `localTree` has keys like `stories/My_Story/README.md`
             if (localTree.size === 0) {
-                setError("No content found in story to diff.");
+                setError(t('github.errors.noContent'));
                 return;
             }
             const firstPath = localTree.keys().next().value; // e.g. stories/X/README.md
             if (!firstPath) {
-                setError("Failed to determine story path.");
+                setError(t('github.errors.noStoryPath'));
                 return;
             }
             const storyDir = firstPath.split('/').slice(0, 2).join('/'); // "stories/X"
@@ -152,7 +154,7 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
 
         } catch (err: any) {
             console.error(err);
-            setError(err.message || "Failed to compute diffs.");
+            setError(err.message || t('github.errors.diffFailed'));
         } finally {
             setDiffLoading(false);
         }
@@ -165,7 +167,7 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
 
         // Message is now single string from editor
         if (!commitMessage || !isCommitValid) {
-            setError('Please provide a valid commit message.');
+            setError(t('github.errors.invalidCommit'));
             return;
         }
 
@@ -200,7 +202,7 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
                         // For Added/Modified, we need the content
                         const content = localTree.get(diff.path)?.content;
                         if (content === undefined) {
-                            throw new Error(`Content not found for ${diff.path}`);
+                            throw new Error(t('github.errors.contentNotFound', { path: diff.path }));
                         }
 
                         await pushFile(
@@ -251,7 +253,7 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
                         onClick={handleFetchDiff}
                         disabled={diffLoading || !parsedContent}
                     >
-                        {diffLoading ? 'Loading...' : 'Fetch & Diff'}
+                        {diffLoading ? t('common.loading') : t('github.actions.fetchDiff')}
                     </button>
 
                     {error && <div className="error-message">{error}</div>}
@@ -274,12 +276,12 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
                                     onClick={handlePush}
                                     disabled={pushLoading || !isCommitValid || selectedPaths.length === 0}
                                 >
-                                    {pushLoading ? 'Pushing...' : `Push ${selectedPaths.length} file(s)`}
+                                    {pushLoading ? t('github.actions.pushing') : t('github.actions.pushFiles', { count: selectedPaths.length })}
                                 </button>
 
                                 {pushStatus && (
                                     <div className={`push-status ${pushStatus.failed > 0 ? 'partial' : 'success'}`}>
-                                        {pushStatus.success} succeeded, {pushStatus.failed} failed
+                                        {t('github.status.pushResult', { success: pushStatus.success, failed: pushStatus.failed })}
                                     </div>
                                 )}
                             </div>

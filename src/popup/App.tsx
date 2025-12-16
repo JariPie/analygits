@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import MetadataFetcher from './components/MetadataFetcher'
 import GitHubPanel from './components/GitHubPanel'
 import GitHubStatusBadge from './components/GitHubStatusBadge'
@@ -6,6 +7,7 @@ import { parseSacStory, extractStoryDetails, type ParsedStoryContent } from './u
 import './index.css'
 
 function App() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false)
   const [parsedContent, setParsedContent] = useState<ParsedStoryContent | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -155,7 +157,7 @@ function App() {
         <div className="header-content">
           <div className="header-center">
             <img src="/AnalyGits.png" alt="AnalyGits Logo" className="app-logo" />
-            <p className="subtitle">Fetch and document SAC Stories</p>
+            <p className="subtitle">{t('app.subtitle')}</p>
           </div>
           <GitHubStatusBadge />
         </div>
@@ -178,14 +180,14 @@ function App() {
           <div className="fadeIn">
             <div className="card">
               <div className="card-header">
-                <h2>Story Fetched Successfully!</h2>
+                <h2>{t('app.storyFetchedSuccess')}</h2>
               </div>
-              <h2>{parsedContent?.name || "Story Fetched"}</h2>
+              <h2>{parsedContent?.name || t('app.storyFetchedDefault')}</h2>
               <p>{parsedContent?.description}</p>
 
               {parsedContent?.pages && parsedContent.pages.length > 0 && (
                 <div style={{ marginTop: "1rem" }}>
-                  <h3>Pages ({parsedContent.pages.length})</h3>
+                  <h3>{t('app.sections.pages', { count: parsedContent.pages.length })}</h3>
                   <ul style={{ maxHeight: "200px", overflowY: "auto", paddingLeft: "1.2rem" }}>
                     {parsedContent.pages.map(page => (
                       <li key={page.id}>
@@ -198,7 +200,7 @@ function App() {
 
               {parsedContent?.globalVars && parsedContent.globalVars.length > 0 && (
                 <div style={{ marginTop: "1rem" }}>
-                  <h3>Global Variables ({parsedContent.globalVars.length})</h3>
+                  <h3>{t('app.sections.globalVars', { count: parsedContent.globalVars.length })}</h3>
                   <ul style={{ maxHeight: "150px", overflowY: "auto", paddingLeft: "1.2rem" }}>
                     {parsedContent.globalVars.map(gv => (
                       <li key={gv.id}>
@@ -212,7 +214,7 @@ function App() {
 
               {parsedContent?.scriptObjects && parsedContent.scriptObjects.length > 0 && (
                 <div style={{ marginTop: "1rem" }}>
-                  <h3>Script Objects ({parsedContent.scriptObjects.length})</h3>
+                  <h3>{t('app.sections.scriptObjects', { count: parsedContent.scriptObjects.length })}</h3>
                   <ul style={{ maxHeight: "150px", overflowY: "auto", paddingLeft: "1.2rem" }}>
                     {parsedContent.scriptObjects.map(so => (
                       <li key={so.id}>
@@ -226,7 +228,7 @@ function App() {
 
               {parsedContent?.events && parsedContent.events.length > 0 && (
                 <div style={{ marginTop: "1rem" }}>
-                  <h3>Events ({parsedContent.events.length})</h3>
+                  <h3>{t('app.sections.events', { count: parsedContent.events.length })}</h3>
                   <ul style={{ maxHeight: "150px", overflowY: "auto", paddingLeft: "1.2rem" }}>
                     {parsedContent.events.map((evt, idx) => (
                       <li key={evt.widgetId + idx}>
@@ -242,20 +244,20 @@ function App() {
                   className="secondary-button"
                   onClick={() => setShowJson(!showJson)}
                 >
-                  {showJson ? "Hide Raw JSON" : "Show Raw JSON"}
+                  {showJson ? t('app.actions.hideJson') : t('app.actions.showJson')}
                 </button>
               </div>
 
               {showJson && (
                 <div className="json-viewer-container">
                   <div style={{ padding: "10px", background: "#f0f0f0", marginBottom: "10px", borderRadius: "4px" }}>
-                    <h4>Debug Info</h4>
-                    <p><strong>Pages:</strong> {parsedContent?.pages?.length ?? 0}</p>
-                    <p><strong>Global Vars:</strong> {parsedContent?.globalVars?.length ?? 0}</p>
-                    <p><strong>Script Objects:</strong> {parsedContent?.scriptObjects?.length ?? 0}</p>
-                    <p><strong>Events:</strong> {parsedContent?.events?.length ?? 0}</p>
-                    <p><strong>Entity Keys:</strong> {parsedContent?.content?.entities ? Object.keys(parsedContent.content.entities).join(", ") : "No entities found"}</p>
-                    <p><strong>Is Array?</strong> {Array.isArray(parsedContent?.content?.entities) ? "Yes" : "No"}</p>
+                    <h4>{t('app.debug.title')}</h4>
+                    <p><strong>{t('app.debug.pages')}</strong> {parsedContent?.pages?.length ?? 0}</p>
+                    <p><strong>{t('app.debug.globalVars')}</strong> {parsedContent?.globalVars?.length ?? 0}</p>
+                    <p><strong>{t('app.debug.scriptObjects')}</strong> {parsedContent?.scriptObjects?.length ?? 0}</p>
+                    <p><strong>{t('app.debug.events')}</strong> {parsedContent?.events?.length ?? 0}</p>
+                    <p><strong>{t('app.debug.entityKeys')}</strong> {parsedContent?.content?.entities ? Object.keys(parsedContent.content.entities).join(", ") : t('app.debug.noEntities')}</p>
+                    <p><strong>{t('app.debug.isArray')}</strong> {Array.isArray(parsedContent?.content?.entities) ? t('common.yes') : t('common.no')}</p>
                   </div>
                   <pre className="json-viewer">
                     <code>{JSON.stringify(parsedContent?.content, null, 2)}</code>

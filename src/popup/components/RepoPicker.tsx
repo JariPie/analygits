@@ -15,14 +15,19 @@ const RepoPicker: React.FC<RepoPickerProps> = ({ onRepoChange }) => {
     useEffect(() => {
         if (status !== 'connected') return;
 
+        console.log('🔄 RepoPicker: useEffect triggered', { status });
+
         const fetchRepos = async () => {
+            console.log('🚀 RepoPicker: Fetching repos...');
             setLoading(true);
             setError(null);
             try {
                 const token = await getAccessToken();
                 const repos = await listRepositories(token);
                 setRepositories(repos);
+                console.log('✅ RepoPicker: Repos loaded', repos.length);
             } catch (err: any) {
+                console.error('❌ RepoPicker: Fetch failed', err);
                 setError(err.message);
             } finally {
                 setLoading(false);
@@ -30,7 +35,8 @@ const RepoPicker: React.FC<RepoPickerProps> = ({ onRepoChange }) => {
         };
 
         fetchRepos();
-    }, [status, getAccessToken]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [status]); // Depend only on status to avoid loop from getAccessToken recreation
 
     const handleRepoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const repoFullName = e.target.value;

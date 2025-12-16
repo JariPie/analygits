@@ -170,8 +170,8 @@ export async function getRepoTree(accessToken: string, owner: string, repo: stri
     });
 
     if (!response.ok) {
-        if (response.status === 404) {
-            // Branch or repo doesn't exist, return empty tree (useful for new repos)
+        if (response.status === 404 || response.status === 409) {
+            // Branch or repo doesn't exist (404), or repo is empty (409)
             return [];
         }
         throw new Error(`Failed to get repo tree: ${response.statusText}`);

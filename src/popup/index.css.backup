@@ -26,10 +26,15 @@ body {
 }
 
 .app-header {
-    position: relative;
-    margin-bottom: 2rem;
-    padding: 0.5rem 0;
+  position: sticky; /* nicer UX than relative */
+  top: 0;
+  z-index: 10;
+  margin-bottom: 0; /* remove the 2rem gap */
+  padding: 0.5rem 1rem;
+  background: var(--background);
+  border-bottom: 1px solid var(--border, #e9ecf2);
 }
+
 
 .header-content {
     display: flex;

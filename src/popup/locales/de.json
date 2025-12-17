@@ -115,6 +115,21 @@
         "save": "Speichern",
         "cancel": "Abbrechen",
         "yes": "Ja",
-        "no": "Nein"
+        "no": "Nein",
+        "settings": "Einstellungen",
+        "close": "Schließen"
+    },
+    "settings": {
+        "title": "Einstellungen",
+        "language": {
+            "label": "Sprache",
+            "system": "Systemstandard",
+            "en": "English",
+            "de": "Deutsch"
+        }
+    },
+    "toast": {
+        "copied": "In die Zwischenablage kopiert",
+        "saved": "Einstellungen gespeichert"
     }
 }

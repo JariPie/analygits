@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "AnalyGits",
     "version": "1.0.0",
-    "description": "Fetch SAP OData metadata and generate documentation.",
+    "description": "Version Control for SAP Analytics Cloud",
     "permissions": [
         "storage",
         "tabs",

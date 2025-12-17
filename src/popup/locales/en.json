@@ -115,6 +115,21 @@
         "save": "Save",
         "cancel": "Cancel",
         "yes": "Yes",
-        "no": "No"
+        "no": "No",
+        "settings": "Settings",
+        "close": "Close"
+    },
+    "settings": {
+        "title": "Settings",
+        "language": {
+            "label": "Language",
+            "system": "System Default",
+            "en": "English",
+            "de": "Deutsch"
+        }
+    },
+    "toast": {
+        "copied": "Copied to clipboard",
+        "saved": "Settings saved"
     }
 }

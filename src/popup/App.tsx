@@ -2,19 +2,28 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import MetadataFetcher from './components/MetadataFetcher'
 import GitHubPanel from './components/GitHubPanel'
-import GitHubStatusBadge from './components/GitHubStatusBadge'
 import StoryViewer from './components/StoryViewer'
 import { parseSacStory, type ParsedStoryContent } from './utils/sacParser'
+import TopBar from './components/TopBar'
+import SettingsModal from './components/SettingsModal'
+import { useLanguagePreference } from './hooks/useLanguagePreference'
 import './index.css'
 
 function App() {
   const { t } = useTranslation();
+
+  // Initialize language preference
+  useLanguagePreference();
+
   const [loading, setLoading] = useState(false)
   const [parsedContent, setParsedContent] = useState<ParsedStoryContent | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [url, setUrl] = useState('');
   const [storyId, setStoryId] = useState('');
   const [storyName, setStoryName] = useState('');
+
+  // UI State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // State to control visibility of heavy content
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
@@ -102,8 +111,6 @@ function App() {
     setLoading(true)
     setError(null)
     setParsedContent(null)
-    // setShowJson(false) // Reset view
-    // setActiveTab('content'); // Reset view to content tab
 
     try {
       let fetchOptions: any = { type: "FETCH_DATA", url: fetchUrl };
@@ -159,16 +166,17 @@ function App() {
 
   return (
     <div className="app-container">
-      <header className="app-header">
-        <GitHubStatusBadge />
-        <div className="header-content">
-          <div className="header-center">
-            <img src="/App_Text.png" alt="AnalyGits" className="app-logo" />
-          </div>
-        </div>
-      </header>
+      <TopBar
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onRefresh={isStoryLoaded ? handleRefresh : undefined}
+      />
 
-      <main>
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
+
+      <main className="app-main">
         {/* New Story Alert */}
         {isDifferentStory && (
           <div className="new-story-alert">
@@ -203,10 +211,10 @@ function App() {
         )}
 
         {isStoryLoaded && (
-          <>
+          <div className="content-stack">
             <StoryViewer content={parsedContent} onRefresh={handleRefresh} />
             <GitHubPanel parsedContent={parsedContent} />
-          </>
+          </div>
         )}
       </main>
     </div>

@@ -12,7 +12,10 @@
         },
         "actions": {
             "showJson": "Show Raw JSON",
-            "hideJson": "Hide Raw JSON"
+            "hideJson": "Hide Raw JSON",
+            "refresh": "Reload",
+            "newStoryDetected": "New Story Detected: {{name}}",
+            "fetchNewStory": "Fetch New Story"
         },
         "debug": {
             "title": "Debug Info",
@@ -52,10 +55,7 @@
         "actions": {
             "fetch": "Fetch Story",
             "fetchWithName": "Fetch Story {{name}}",
-            "fetching": "Fetching...",
-            "refresh": "Refresh",
-            "newStoryDetected": "New Story Detected: {{name}}",
-            "fetchNewStory": "Fetch New Story"
+            "fetching": "Fetching..."
         }
     },
     "repo": {

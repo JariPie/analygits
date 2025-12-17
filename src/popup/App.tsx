@@ -58,7 +58,7 @@ function App() {
   }, [parsedContent, isStorageLoaded]);
 
 
-  // Auto-detect SAC Story from current tab - Only run after storage is loaded to verify if we need to override
+  // Auto-detect SAC Story from current tab
   useEffect(() => {
     if (!isStorageLoaded) return;
 
@@ -70,7 +70,7 @@ function App() {
         // Check for storyId in URL parameters
         let storyIdParam = urlObj.searchParams.get("storyId");
 
-        // Check hash for modern SAC URL format: .../app.html#/story2&/s2/<ID>/?...
+        // Check hash for modern SAC URL format
         if (!storyIdParam && urlObj.hash) {
           const hashMatch = urlObj.hash.match(/\/s2\/([A-Z0-9]+)/);
           if (hashMatch && hashMatch[1]) {
@@ -81,8 +81,6 @@ function App() {
         if (storyIdParam) {
           // Detect story name from tab title if available
           if (currentTab.title) {
-            // Basic heuristic: SAC titles often are "Story Name" or "Story Name - SAP Analytics Cloud" or "Story Name - Stories"
-            // Depending on how clean we want it, we can just use the full title or strip common suffixes.
             let cleanTitle = currentTab.title;
             cleanTitle = cleanTitle.replace(" - SAP Analytics Cloud", "");
             cleanTitle = cleanTitle.replace(" - Stories", "");
@@ -90,9 +88,6 @@ function App() {
             setStoryName(cleanTitle);
           }
 
-          // Logic: Only update inputs if the detected ID is different from what we loaded/have.
-          // This means if we are on Story B, and we have Story A stored, we update inputs to Story B.
-          // But we don't necessarily clear the fetched content of Story A until the user clicks Fetch.
           setStoryId((prev) => {
             if (prev !== storyIdParam) {
               return storyIdParam || "";
@@ -115,28 +110,27 @@ function App() {
     });
   }, [isStorageLoaded]);
 
-  const handleFetch = async (url: string, storyId?: string) => {
+  const handleFetch = async (fetchUrl: string, fetchStoryId?: string) => {
     setLoading(true)
     setError(null)
     setParsedContent(null)
     setShowJson(false) // Reset view
 
     try {
-      let fetchOptions: any = { type: "FETCH_DATA", url };
+      let fetchOptions: any = { type: "FETCH_DATA", url: fetchUrl };
 
-      // If Story ID is provided, we assume it's a POST request for SAC Story content
-      if (storyId) {
+      if (fetchStoryId) {
         fetchOptions.method = "POST";
         fetchOptions.body = {
           "action": "getContent",
           "data": {
             "resourceType": "STORY",
-            "resourceId": storyId,
+            "resourceId": fetchStoryId,
             "oOpt": {
               "fetchDefaultBookmark": true,
-              "sTranslationLocale": "en", // Defaulting to EN, can be made configurable
+              "sTranslationLocale": "en",
               "propertyBag": true,
-              "presentationId": storyId,
+              "presentationId": fetchStoryId,
               "isStory": true,
               "isStory2": true,
               "fetchTheme": true,
@@ -165,6 +159,15 @@ function App() {
     }
   }
 
+  // Render logic variables
+  const isStoryLoaded = !!parsedContent;
+  const isDifferentStory = isStoryLoaded && storyId && parsedContent?.id !== storyId;
+
+  const handleRefresh = () => {
+    const customStoryId = isDifferentStory ? storyId : (parsedContent?.id || storyId);
+    handleFetch(url, customStoryId);
+  };
+
   return (
     <div className="app-container">
       <header className="app-header">
@@ -172,28 +175,57 @@ function App() {
         <div className="header-content">
           <div className="header-center">
             <img src="/App_Text.png" alt="AnalyGits" className="app-logo" />
-            {/* Subtitle removed as requested */}
           </div>
         </div>
       </header>
 
       <main>
-        <div className="card">
-          <MetadataFetcher
-            onFetch={handleFetch}
-            isLoading={loading}
-            url={url}
-            storyId={storyId}
-            storyName={storyName}
-          />
-          {error && <div className="error-message">{error}</div>}
-        </div>
+        {/* New Story Alert */}
+        {isDifferentStory && (
+          <div className="new-story-alert">
+            <div className="new-story-info">
+              {t('app.actions.newStoryDetected', { name: storyName || storyId })}
+            </div>
+            <button className="new-story-btn" onClick={() => handleFetch(url, storyId)}>
+              {t('app.actions.fetchNewStory')}
+            </button>
+          </div>
+        )}
+
+        {/* Main Fetcher - Hide if loaded */}
+        {(!isStoryLoaded) && (
+          <div className="card">
+            <MetadataFetcher
+              onFetch={handleFetch}
+              isLoading={loading}
+              url={url}
+              storyId={storyId}
+              storyName={storyName}
+            />
+            {error && <div className="error-message">{error}</div>}
+          </div>
+        )}
+
+        {/* Error when re-fetching/refreshing while loaded */}
+        {isStoryLoaded && error && (
+          <div className="card">
+            <div className="error-message">{error}</div>
+          </div>
+        )}
 
         {parsedContent && (
           <div className="fadeIn">
             <div className="card">
               <div className="card-header">
                 <h2>{t('app.storyFetchedSuccess')}</h2>
+                <button className="refresh-btn" onClick={handleRefresh} title={t('app.actions.refresh')}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M1 20v-6h6"></path>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                  {t('app.actions.refresh')}
+                </button>
               </div>
               <h2>{parsedContent?.name || t('app.storyFetchedDefault')}</h2>
               <p>{parsedContent?.description}</p>
@@ -280,9 +312,6 @@ function App() {
             </div>
 
             <GitHubPanel parsedContent={parsedContent} />
-
-
-
 
           </div>
         )}

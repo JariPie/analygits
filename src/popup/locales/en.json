@@ -52,7 +52,10 @@
         "actions": {
             "fetch": "Fetch Story",
             "fetchWithName": "Fetch Story {{name}}",
-            "fetching": "Fetching..."
+            "fetching": "Fetching...",
+            "refresh": "Refresh",
+            "newStoryDetected": "New Story Detected: {{name}}",
+            "fetchNewStory": "Fetch New Story"
         }
     },
     "repo": {

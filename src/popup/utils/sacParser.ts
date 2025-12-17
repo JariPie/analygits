@@ -45,6 +45,7 @@ export interface ParsedStoryContent {
     globalVars: ScriptVariable[];
     scriptObjects: ScriptObject[];
     events: WidgetEvent[];
+    id: string;
 }
 
 export function extractStoryDetails(innerContent: any): {
@@ -414,23 +415,39 @@ export function extractStoryDetails(innerContent: any): {
 }
 
 export function parseSacStory(jsonString: string): ParsedStoryContent {
-    let data;
+    let data: any;
     try {
-        data = JSON.parse(jsonString) as SacStoryResponse;
+        data = JSON.parse(jsonString);
         console.log("Parsed SAC Response:", data);
     } catch (e) {
         console.error("Raw response:", jsonString);
         throw new Error("Failed to parse initial JSON response from SAC.");
     }
 
-    let resource: any = data;
-    if (data.resource) resource = data.resource;
-
-    if (!resource || !resource.cdata) {
-        throw new Error("Invalid structure: 'cdata' missing on resource. got: " + JSON.stringify(data).substring(0, 100));
+    if (!data) {
+        throw new Error("Invalid SAC Story response: Response is empty or null.");
     }
+
+    let resource = data;
+    // SAC API often wraps the response in a 'resource' property
+    if (data.resource) {
+        resource = data.resource;
+    }
+
+    // Validate resource structure
+    if (!resource) {
+        throw new Error("Invalid SAC Story structure: missing 'resource' property. Keys: " + Object.keys(data).join(", "));
+    }
+
+    if (!resource.cdata) {
+        // More specific error context
+        const errorMsg = "Invalid SAC Story structure: 'cdata' property is missing on resource object.";
+        console.error(errorMsg, "Keys found:", Object.keys(resource));
+        throw new Error(errorMsg + " Got keys: " + Object.keys(resource).join(", "));
+    }
+
     if (resource.cdata.content === undefined || resource.cdata.content === null) {
-        throw new Error("Invalid structure: 'cdata.content' missing.");
+        throw new Error("Invalid SAC Story structure: 'cdata.content' missing.");
     }
 
     let innerContent: any;
@@ -446,11 +463,13 @@ export function parseSacStory(jsonString: string): ParsedStoryContent {
     }
 
     const details = extractStoryDetails(innerContent);
+    const storyId = resource.resourceId || resource.id || (details.pages.length > 0 ? "unknown-id" : "empty-story");
 
     return {
-        name: resource.name,
-        description: resource.description,
+        name: resource.name || "Untitled Story",
+        description: resource.description || "",
         content: innerContent,
+        id: storyId,
         ...details
     };
 }

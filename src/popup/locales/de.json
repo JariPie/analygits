@@ -52,7 +52,10 @@
         "actions": {
             "fetch": "Story abrufen",
             "fetchWithName": "Story {{name}} abrufen",
-            "fetching": "Abrufen..."
+            "fetching": "Abrufen...",
+            "refresh": "Aktualisieren",
+            "newStoryDetected": "Neue Story entdeckt: {{name}}",
+            "fetchNewStory": "Neue Story abrufen"
         }
     },
     "repo": {

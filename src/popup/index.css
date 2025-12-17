@@ -462,13 +462,39 @@ body {
 /* Repo Picker */
 .repo-picker {
     margin: 1rem 0;
-    padding: 1rem;
-    background: var(--muted);
-    border-radius: 6px;
+    padding: 0;
+    background: var(--card-bg);
+    border-radius: 8px;
     border: 1px solid var(--border);
+    transition: all 0.2s;
+    overflow: hidden;
 }
 
-.repo-select,
+.repo-picker:hover {
+    border-color: var(--primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.repo-picker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: white;
+    border-bottom: 1px solid var(--border);
+}
+
+.repo-picker-label {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 0.95rem;
+}
+
+.repo-picker-content {
+    padding: 1rem;
+    background: white;
+}
+
 .branch-input {
     width: 100%;
     padding: 0.5rem;
@@ -478,7 +504,6 @@ body {
     background: white;
 }
 
-/* Diff Viewer */
 /* Diff Viewer */
 .diff-viewer {
     margin-top: 1rem;

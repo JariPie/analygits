@@ -12,6 +12,12 @@
     --muted: #f1f5f9;
 }
 
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -26,6 +32,11 @@ body {
     max-height: 600px;
     /* Chrome extension popup limit */
     background: var(--background);
+    transition: min-height 0.2s ease;
+}
+
+.app-container.modal-open {
+    min-height: 450px;
 }
 
 .app-main {

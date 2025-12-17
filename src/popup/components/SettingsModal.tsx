@@ -1,17 +1,25 @@
+import CustomSelect from './CustomSelect';
 import { useTranslation } from 'react-i18next';
-import { useLanguagePreference, type LanguageOption } from '../hooks/useLanguagePreference';
-import './SettingsModal.css'; // We'll assume we can add some specific styles or rely on global
+import { type LanguageOption } from '../hooks/useLanguagePreference';
+import './SettingsModal.css';
 
 interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
+    currentLanguage: LanguageOption;
+    onLanguageChange: (lang: LanguageOption) => void;
 }
 
-export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+export default function SettingsModal({ isOpen, onClose, currentLanguage, onLanguageChange }: SettingsModalProps) {
     const { t } = useTranslation();
-    const { language, setLanguage } = useLanguagePreference();
 
     if (!isOpen) return null;
+
+    const languageOptions = [
+        { value: 'system', label: t('settings.language.system') },
+        { value: 'en', label: t('settings.language.en') },
+        { value: 'de', label: t('settings.language.de') },
+    ];
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -24,21 +32,15 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <div className="modal-body">
                     <div className="setting-item">
                         <label htmlFor="language-select">{t('settings.language.label')}</label>
-                        <select
-                            id="language-select"
-                            value={language}
-                            onChange={(e) => setLanguage(e.target.value as LanguageOption)}
-                            className="settings-select"
-                        >
-                            <option value="system">{t('settings.language.system')}</option>
-                            <option value="en">{t('settings.language.en')}</option>
-                            <option value="de">{t('settings.language.de')}</option>
-                        </select>
+                        <CustomSelect
+                            value={currentLanguage}
+                            onChange={(val) => onLanguageChange(val as LanguageOption)}
+                            options={languageOptions}
+                        />
                     </div>
                 </div>
 
                 <div className="modal-footer">
-                    {/* Future: maybe a save button if we didn't auto-save, but hooks auto-save */}
                     <button className="primary-button small" onClick={onClose}>
                         {t('common.close')}
                     </button>

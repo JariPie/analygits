@@ -13,7 +13,7 @@ function App() {
   const { t } = useTranslation();
 
   // Initialize language preference
-  useLanguagePreference();
+  const { language, setLanguage } = useLanguagePreference();
 
   const [loading, setLoading] = useState(false)
   const [parsedContent, setParsedContent] = useState<ParsedStoryContent | null>(null)
@@ -165,7 +165,7 @@ function App() {
   };
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${isSettingsOpen ? 'modal-open' : ''}`}>
       <TopBar
         onOpenSettings={() => setIsSettingsOpen(true)}
         onRefresh={isStoryLoaded ? handleRefresh : undefined}
@@ -174,6 +174,8 @@ function App() {
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
+        currentLanguage={language}
+        onLanguageChange={setLanguage}
       />
 
       <main className="app-main">

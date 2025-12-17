@@ -1,7 +1,89 @@
 
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ParsedStoryContent } from '../utils/sacParser';
+import type { ParsedStoryContent, WidgetEvent, ScriptObject, ScriptObjectFunction } from '../utils/sacParser';
+
+const CodePreview = ({ code }: { code: string }) => (
+    <pre className="code-preview">
+        <code>{code}</code>
+    </pre>
+);
+
+const ExpandableItem = ({ title, subtitle, children, onToggle }: { title: React.ReactNode, subtitle?: React.ReactNode, children?: React.ReactNode, onToggle?: () => void }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const hasChildren = !!children;
+
+    const handleClick = () => {
+        if (hasChildren) {
+            setIsOpen(!isOpen);
+            if (onToggle) onToggle();
+        }
+    };
+
+    return (
+        <li className={`detail-item ${hasChildren ? 'expandable' : ''}`}>
+            <div className="detail-header" onClick={handleClick} style={{ cursor: hasChildren ? 'pointer' : 'default', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ flex: 1 }}>
+                    <div className="detail-main" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {title}
+                    </div>
+                    {subtitle && <div className="detail-sub">{subtitle}</div>}
+                </div>
+                {hasChildren && (
+                    <div className={`accordion-icon ${isOpen ? 'rotated' : ''}`} style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: '#94a3b8' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                )}
+            </div>
+            {isOpen && children && (
+                <div className="detail-content" style={{ marginTop: '0.5rem' }}>
+                    {children}
+                </div>
+            )}
+        </li>
+    );
+};
+
+const EventItem = ({ event }: { event: WidgetEvent }) => {
+    return (
+        <ExpandableItem
+            title={event.widgetName}
+            subtitle={event.eventName}
+        >
+            {event.body && <CodePreview code={event.body} />}
+        </ExpandableItem>
+    );
+};
+
+const ScriptFunctionItem = ({ func }: { func: ScriptObjectFunction }) => {
+    const args = func.arguments ? `(${func.arguments.join(', ')})` : '()';
+    return (
+        <ExpandableItem
+            title={<span style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>{func.name}{args}</span>}
+        >
+            {func.body && <CodePreview code={func.body} />}
+        </ExpandableItem>
+    );
+}
+
+const ScriptObjectItem = ({ scriptObject }: { scriptObject: ScriptObject }) => {
+    return (
+        <ExpandableItem
+            title={scriptObject.name}
+            subtitle={`${scriptObject.functions.length} functions`}
+        >
+            {scriptObject.functions.length > 0 && (
+                <ul className="details-list nested">
+                    {scriptObject.functions.map((func, idx) => (
+                        <ScriptFunctionItem key={func.name + idx} func={func} />
+                    ))}
+                </ul>
+            )}
+        </ExpandableItem>
+    )
+}
 
 interface StoryViewerProps {
     content: ParsedStoryContent;
@@ -65,15 +147,15 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ content, onRefresh }) => {
             <div className="story-sections">
 
                 {/* Pages */}
-                <div className="accordion-item">
-                    <SectionHeader
-                        title={t('app.sections.pages', { count: content.pages.length }).replace('()', '').trim()}
-                        count={content.pages.length}
-                        sectionKey="pages"
-                    />
-                    {expandedSection === 'pages' && (
-                        <div className="accordion-content">
-                            {content.pages.length > 0 ? (
+                {content.pages.length > 0 && (
+                    <div className="accordion-item">
+                        <SectionHeader
+                            title={t('app.sections.pages', { count: content.pages.length }).replace('()', '').trim()}
+                            count={content.pages.length}
+                            sectionKey="pages"
+                        />
+                        {expandedSection === 'pages' && (
+                            <div className="accordion-content">
                                 <ul className="details-list">
                                     {content.pages.map(page => (
                                         <li key={page.id} className="detail-item">
@@ -82,23 +164,21 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ content, onRefresh }) => {
                                         </li>
                                     ))}
                                 </ul>
-                            ) : (
-                                <div className="empty-state">No pages found</div>
-                            )}
-                        </div>
-                    )}
-                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Global Variables */}
-                <div className="accordion-item">
-                    <SectionHeader
-                        title={t('app.sections.globalVars', { count: content.globalVars.length }).replace('()', '').trim()}
-                        count={content.globalVars.length}
-                        sectionKey="globalVars"
-                    />
-                    {expandedSection === 'globalVars' && (
-                        <div className="accordion-content">
-                            {content.globalVars.length > 0 ? (
+                {content.globalVars.length > 0 && (
+                    <div className="accordion-item">
+                        <SectionHeader
+                            title={t('app.sections.globalVars', { count: content.globalVars.length }).replace('()', '').trim()}
+                            count={content.globalVars.length}
+                            sectionKey="globalVars"
+                        />
+                        {expandedSection === 'globalVars' && (
+                            <div className="accordion-content">
                                 <ul className="details-list">
                                     {content.globalVars.map(gv => (
                                         <li key={gv.id} className="detail-item">
@@ -110,62 +190,50 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ content, onRefresh }) => {
                                         </li>
                                     ))}
                                 </ul>
-                            ) : (
-                                <div className="empty-state">No global variables found</div>
-                            )}
-                        </div>
-                    )}
-                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Script Objects */}
-                <div className="accordion-item">
-                    <SectionHeader
-                        title={t('app.sections.scriptObjects', { count: content.scriptObjects.length }).replace('()', '').trim()}
-                        count={content.scriptObjects.length}
-                        sectionKey="scriptObjects"
-                    />
-                    {expandedSection === 'scriptObjects' && (
-                        <div className="accordion-content">
-                            {content.scriptObjects.length > 0 ? (
+                {content.scriptObjects.length > 0 && (
+                    <div className="accordion-item">
+                        <SectionHeader
+                            title={t('app.sections.scriptObjects', { count: content.scriptObjects.length }).replace('()', '').trim()}
+                            count={content.scriptObjects.length}
+                            sectionKey="scriptObjects"
+                        />
+                        {expandedSection === 'scriptObjects' && (
+                            <div className="accordion-content">
                                 <ul className="details-list">
                                     {content.scriptObjects.map(so => (
-                                        <li key={so.id} className="detail-item">
-                                            <div className="detail-main">{so.name}</div>
-                                            <div className="detail-sub">{so.functions.length} functions</div>
-                                        </li>
+                                        <ScriptObjectItem key={so.id} scriptObject={so} />
                                     ))}
                                 </ul>
-                            ) : (
-                                <div className="empty-state">No script objects found</div>
-                            )}
-                        </div>
-                    )}
-                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Events */}
-                <div className="accordion-item">
-                    <SectionHeader
-                        title={t('app.sections.events', { count: content.events.length }).replace('()', '').trim()}
-                        count={content.events.length}
-                        sectionKey="events"
-                    />
-                    {expandedSection === 'events' && (
-                        <div className="accordion-content">
-                            {content.events.length > 0 ? (
+                {content.events.length > 0 && (
+                    <div className="accordion-item">
+                        <SectionHeader
+                            title={t('app.sections.events', { count: content.events.length }).replace('()', '').trim()}
+                            count={content.events.length}
+                            sectionKey="events"
+                        />
+                        {expandedSection === 'events' && (
+                            <div className="accordion-content">
                                 <ul className="details-list">
                                     {content.events.map((evt, idx) => (
-                                        <li key={evt.widgetId + idx} className="detail-item">
-                                            <div className="detail-main">{evt.widgetName}</div>
-                                            <div className="detail-sub">{evt.eventName}</div>
-                                        </li>
+                                        <EventItem key={evt.widgetId + idx} event={evt} />
                                     ))}
                                 </ul>
-                            ) : (
-                                <div className="empty-state">No events found</div>
-                            )}
-                        </div>
-                    )}
-                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
 
             </div>
         </div>

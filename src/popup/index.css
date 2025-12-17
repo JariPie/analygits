@@ -230,6 +230,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    margin-bottom: 2rem;
+    /* Added spacing at bottom as requested */
 }
 
 .accordion-item {
@@ -346,6 +348,36 @@ body {
     color: var(--text-light);
     font-style: italic;
     font-size: 0.9rem;
+}
+
+/* Code Preview Styles */
+.code-preview {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 1rem;
+    border-radius: 6px;
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    font-size: 0.8rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin: 0.5rem 0 0 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.details-list.nested {
+    margin-top: 0.5rem;
+    border-left: 2px solid var(--border);
+    margin-left: 0.5rem;
+    padding-left: 0.5rem;
+}
+
+.detail-item.expandable:hover {
+    background-color: #f8fafc;
+}
+
+.detail-header {
+    padding: 0.25rem 0;
 }
 
 /* ============================================

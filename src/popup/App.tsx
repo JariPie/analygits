@@ -168,7 +168,6 @@ function App() {
     <div className={`app-container ${isSettingsOpen ? 'modal-open' : ''}`}>
       <TopBar
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onRefresh={isStoryLoaded ? handleRefresh : undefined}
       />
 
       <SettingsModal

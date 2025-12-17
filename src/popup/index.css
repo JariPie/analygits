@@ -479,84 +479,189 @@ body {
 }
 
 /* Diff Viewer */
+/* Diff Viewer */
 .diff-viewer {
     margin-top: 1rem;
 }
 
-.diff-summary {
+.diff-filters {
     display: flex;
-    gap: 1rem;
+    gap: 0.5rem;
     margin-bottom: 1rem;
-    font-size: 0.85rem;
     flex-wrap: wrap;
+    justify-content: center;
+    /* Center filters */
 }
 
-.diff-count {
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-weight: 600;
+.diff-filter-btn {
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
     font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--muted);
+    color: var(--text-light);
+    opacity: 0.6;
 }
 
-.diff-count.added {
+.diff-filter-btn:hover {
+    opacity: 0.8;
+}
+
+.diff-filter-btn.active {
+    opacity: 1;
+}
+
+.diff-filter-btn.added.active {
     background: #dcfce7;
-    color: #16a34a;
+    color: #15803d;
+    border-color: #bbf7d0;
 }
 
-.diff-count.modified {
-    background: #fef3c7;
-    color: #d97706;
+.diff-filter-btn.modified.active {
+    background: #fef9c3;
+    color: #a16207;
+    border-color: #fde047;
 }
 
-.diff-count.deleted {
-    background: #fef2f2;
-    color: #dc2626;
+.diff-filter-btn.deleted.active {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fecaca;
 }
 
 .diff-list {
-    max-height: 250px;
+    max-height: 400px;
     overflow-y: auto;
-    border: 1px solid var(--border);
-    border-radius: 6px;
+    overflow-x: hidden;
+    /* Remove horizontal scrollbar */
+    padding: 2px;
+    /* Avoid focus outline clip */
 }
 
+/* Match accordion-item style */
 .diff-item {
-    background: white;
+    background: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border);
     overflow: hidden;
-    border-bottom: 1px solid var(--border);
+    margin-bottom: 0.75rem;
+    transition: all 0.2s;
+}
+
+.diff-item:hover {
+    border-color: var(--primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .diff-item:last-child {
-    border-bottom: none;
+    margin-bottom: 0;
 }
 
 .diff-item-header {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    background: var(--muted);
+    padding: 0.75rem 1rem;
+    background: white;
     cursor: pointer;
+    transition: background-color 0.2s;
+    user-select: none;
+}
+
+.diff-item-header:hover {
+    background: var(--muted);
+}
+
+.diff-status-icon {
+    font-size: 0.7rem;
+    font-weight: 700;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.diff-status-icon.added {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.diff-status-icon.modified {
+    background: #fef9c3;
+    color: #a16207;
+}
+
+.diff-status-icon.deleted {
+    background: #fee2e2;
+    color: #b91c1c;
 }
 
 .diff-path {
     flex: 1;
+    min-width: 0;
+    /* Critical for flex truncation */
     font-family: 'Fira Code', monospace;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-right: 0.5rem;
+}
+
+.diff-expand-btn {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
 }
 
 .diff-content {
-    padding: 0.75rem;
+    padding: 0;
     background: #1e1e1e;
+    /* Keep dark mode */
+    border-top: 1px solid var(--border);
+}
+
+.diff-content pre {
+    margin: 0;
+    padding: 1rem;
     color: #d4d4d4;
     font-family: 'Fira Code', monospace;
     font-size: 0.75rem;
-    max-height: 200px;
-    overflow: auto;
+    line-height: 1.4;
+    overflow-x: auto;
+    /* Scroll ONLY the code */
+    max-height: 300px;
+}
+
+.diff-section {
+    border-bottom: 1px solid #333;
+}
+
+.diff-section:last-child {
+    border-bottom: none;
+}
+
+.diff-section-header {
+    padding: 0.5rem 1rem;
+    background: #252526;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: system-ui, -apple-system, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 /* Commit Message Editor */

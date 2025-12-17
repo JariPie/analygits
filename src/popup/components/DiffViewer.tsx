@@ -12,6 +12,13 @@ const DiffViewer: React.FC<DiffViewerProps> = ({ diffs, onFileSelect }) => {
     const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
     const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set(diffs.map(d => d.path)));
 
+    // Filter state: all true by default
+    const [activeFilters, setActiveFilters] = useState({
+        added: true,
+        modified: true,
+        deleted: true
+    });
+
     const toggleExpand = (path: string) => {
         setExpandedPaths(prev => {
             const next = new Set(prev);
@@ -37,19 +44,26 @@ const DiffViewer: React.FC<DiffViewerProps> = ({ diffs, onFileSelect }) => {
         });
     };
 
+    const toggleFilter = (type: 'added' | 'modified' | 'deleted') => {
+        setActiveFilters(prev => ({
+            ...prev,
+            [type]: !prev[type]
+        }));
+    };
+
     const getStatusIcon = (status: FileDiff['status']) => {
         switch (status) {
-            case 'added': return <span className="diff-status diff-added">A</span>;
-            case 'modified': return <span className="diff-status diff-modified">M</span>;
-            case 'deleted': return <span className="diff-status diff-deleted">D</span>;
+            case 'added': return <span className="diff-status-icon added">A</span>;
+            case 'modified': return <span className="diff-status-icon modified">M</span>;
+            case 'deleted': return <span className="diff-status-icon deleted">D</span>;
         }
     };
 
     const getStatusColor = (status: FileDiff['status']) => {
         switch (status) {
-            case 'added': return '#28a745';
-            case 'modified': return '#ffc107';
-            case 'deleted': return '#dc3545';
+            case 'added': return '#22c55e'; // green-500
+            case 'modified': return '#eab308'; // yellow-500
+            case 'deleted': return '#ef4444'; // red-500
         }
     };
 
@@ -77,13 +91,13 @@ const DiffViewer: React.FC<DiffViewerProps> = ({ diffs, onFileSelect }) => {
             <div className="diff-content">
                 {diff.oldContent && (
                     <div className="diff-section">
-                        <div className="diff-section-header" style={{ color: '#dc3545' }}>{t('diff.labels.old')}</div>
+                        <div className="diff-section-header" style={{ color: '#ef4444' }}>{t('diff.labels.old')}</div>
                         <pre className="diff-old">{diff.oldContent}</pre>
                     </div>
                 )}
                 {diff.newContent && (
                     <div className="diff-section">
-                        <div className="diff-section-header" style={{ color: '#28a745' }}>{t('diff.labels.new')}</div>
+                        <div className="diff-section-header" style={{ color: '#22c55e' }}>{t('diff.labels.new')}</div>
                         <pre className="diff-new">{diff.newContent}</pre>
                     </div>
                 )}
@@ -99,16 +113,33 @@ const DiffViewer: React.FC<DiffViewerProps> = ({ diffs, onFileSelect }) => {
         );
     }
 
+    const filteredDiffs = diffs.filter(d => activeFilters[d.status]);
+
     return (
         <div className="diff-viewer">
-            <div className="diff-summary">
-                <span className="diff-count added">{t('diff.stats.added', { count: diffs.filter(d => d.status === 'added').length })}</span>
-                <span className="diff-count modified">{t('diff.stats.modified', { count: diffs.filter(d => d.status === 'modified').length })}</span>
-                <span className="diff-count deleted">{t('diff.stats.deleted', { count: diffs.filter(d => d.status === 'deleted').length })}</span>
+            <div className="diff-filters">
+                <button
+                    className={`diff-filter-btn added ${activeFilters.added ? 'active' : ''}`}
+                    onClick={() => toggleFilter('added')}
+                >
+                    {t('diff.stats.added', { count: diffs.filter(d => d.status === 'added').length })}
+                </button>
+                <button
+                    className={`diff-filter-btn modified ${activeFilters.modified ? 'active' : ''}`}
+                    onClick={() => toggleFilter('modified')}
+                >
+                    {t('diff.stats.modified', { count: diffs.filter(d => d.status === 'modified').length })}
+                </button>
+                <button
+                    className={`diff-filter-btn deleted ${activeFilters.deleted ? 'active' : ''}`}
+                    onClick={() => toggleFilter('deleted')}
+                >
+                    {t('diff.stats.deleted', { count: diffs.filter(d => d.status === 'deleted').length })}
+                </button>
             </div>
 
             <div className="diff-list">
-                {diffs.map(diff => (
+                {filteredDiffs.map(diff => (
                     <div key={diff.path} className="diff-item" style={{ borderLeft: `3px solid ${getStatusColor(diff.status)}` }}>
                         <div className="diff-item-header">
                             <label className="diff-checkbox-label">
@@ -119,7 +150,11 @@ const DiffViewer: React.FC<DiffViewerProps> = ({ diffs, onFileSelect }) => {
                                 />
                             </label>
                             {getStatusIcon(diff.status)}
-                            <span className="diff-path" onClick={() => toggleExpand(diff.path)}>
+                            <span
+                                className="diff-path"
+                                onClick={() => toggleExpand(diff.path)}
+                                title={diff.path} // Native browser tooltip for full path
+                            >
                                 {diff.path}
                             </span>
                             <button

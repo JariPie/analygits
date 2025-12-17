@@ -248,13 +248,15 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
             {/* Diff Section */}
             {selectedRepo && (
                 <div className="github-diff-section">
-                    <button
-                        className="primary-button"
-                        onClick={handleFetchDiff}
-                        disabled={diffLoading || !parsedContent}
-                    >
-                        {diffLoading ? t('common.loading') : t('github.actions.fetchDiff')}
-                    </button>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                        <button
+                            className="primary-button"
+                            onClick={handleFetchDiff}
+                            disabled={diffLoading || !parsedContent}
+                        >
+                            {diffLoading ? t('common.loading') : t('github.actions.fetchDiff')}
+                        </button>
+                    </div>
 
                     {error && <div className="error-message">{error}</div>}
 

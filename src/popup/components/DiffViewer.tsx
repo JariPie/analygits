@@ -157,13 +157,25 @@ const DiffViewer: React.FC<DiffViewerProps> = ({ diffs, onFileSelect }) => {
                             >
                                 {diff.path}
                             </span>
-                            <button
-                                className="diff-expand-btn"
+                            <div
+                                className="diff-expand-icon"
                                 onClick={() => toggleExpand(diff.path)}
-                                aria-label={expandedPaths.has(diff.path) ? t('diff.actions.collapse') : t('diff.actions.expand')}
+                                style={{
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: '24px',
+                                    height: '24px',
+                                    color: '#94a3b8',
+                                    transform: expandedPaths.has(diff.path) ? 'rotate(180deg)' : 'rotate(0deg)',
+                                    transition: 'transform 0.2s'
+                                }}
                             >
-                                {expandedPaths.has(diff.path) ? '▼' : '▶'}
-                            </button>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </div>
                         </div>
                         {renderDiffContent(diff)}
                     </div>

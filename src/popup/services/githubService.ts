@@ -41,6 +41,24 @@ export interface FileDiff {
     sha?: string; // SHA of the existing file in GitHub (needed for updates/deletes)
 }
 
+export interface GitHubUser {
+    id: number;
+    login: string;
+    name: string | null;
+    email: string | null;
+}
+
+export interface CommitResult {
+    commitSha: string;
+    htmlUrl: string;
+}
+
+// --- Module State ---
+
+let commitInFlight = false;
+let lastCommitHash: string | null = null;
+let cachedUserProfile: GitHubUser | null = null;
+
 // --- Utility: Generate CSPRNG Session ID ---
 
 export function generateSessionId(byteLength: number = 32): string {
@@ -48,6 +66,29 @@ export function generateSessionId(byteLength: number = 32): string {
     crypto.getRandomValues(bytes);
     return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
 }
+
+// --- Utility: Hash for Idempotency ---
+// Simple hash component: Message + Sorted File Paths + Contents
+async function computeCommitHash(message: string, diffs: FileDiff[]): Promise<string> {
+    const parts: string[] = [message];
+    // Sort diffs by path to ensure consistent order
+    const sortedDiffs = [...diffs].sort((a, b) => a.path.localeCompare(b.path));
+
+    for (const diff of sortedDiffs) {
+        parts.push(diff.path);
+        parts.push(diff.status);
+        if (diff.status !== 'deleted' && diff.newContent) {
+            parts.push(diff.newContent);
+        }
+    }
+
+    const encoder = new TextEncoder();
+    const data = encoder.encode(parts.join('|'));
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 
 // --- Auth: Install URL ---
 
@@ -139,6 +180,84 @@ export async function revokeDeviceToken(deviceToken: string): Promise<void> {
     }
 }
 
+// --- User Profile ---
+
+export async function getUserProfile(accessToken: string, fallbackLogin?: string): Promise<GitHubUser> {
+    if (cachedUserProfile) return cachedUserProfile;
+
+    try {
+        // Optimization: GitHub App Installation tokens (starting with 'ghs_') cannot access /user
+        // We skip the request to avoid a guaranteed 403 Forbidden error in the console.
+        let isForbidden = accessToken.startsWith('ghs_');
+
+        if (!isForbidden) {
+            const response = await fetch('https://api.github.com/user', {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Accept': 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                cachedUserProfile = {
+                    id: data.id,
+                    login: data.login,
+                    name: data.name,
+                    email: data.email,
+                };
+                return cachedUserProfile!;
+            }
+
+            if (response.status === 403) {
+                isForbidden = true;
+            }
+        }
+
+        if (isForbidden && fallbackLogin) {
+            console.warn('Access to /user forbidden (likely installation token). Attempting to use repo owner details as fallback.');
+            // Try to get public profile of the repo owner
+            // This is a heuristic: if the user owns the repo, they are likely the author.
+            const publicResp = await fetch(`https://api.github.com/users/${fallbackLogin}`, {
+                headers: {
+                    'Accept': 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28',
+                    // No token to avoid 403 if token is scoped to just the repo
+                },
+            });
+
+            if (publicResp.ok) {
+                const data = await publicResp.json();
+                if (data.type === 'User') {
+                    cachedUserProfile = {
+                        id: data.id,
+                        login: data.login,
+                        name: data.name,
+                        email: data.email, // Often null in public profile
+                    };
+                    return cachedUserProfile!;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to fetch user profile, using placeholder.', e);
+    }
+
+    // Fallback Placeholder if we can't identify the user
+    // This allows the commit to proceed even if we can't get the author's real identity.
+    // The user accepts "Hybrid Authorship", so a placeholder is better than a crash.
+    console.warn('Using placeholder identity for commit author.');
+    cachedUserProfile = {
+        id: 0,
+        login: 'user',
+        name: 'AnalyGits User',
+        email: 'user@analygits.local',
+    };
+    return cachedUserProfile!;
+}
+
+
 // --- Repos: List Accessible Repositories ---
 
 export async function listRepositories(accessToken: string): Promise<Repository[]> {
@@ -199,81 +318,209 @@ export async function getFileContent(accessToken: string, owner: string, repo: s
     return await response.text();
 }
 
-// --- Git: Push File (Create or Update) ---
+// --- Git Database API Helpers ---
 
-export async function pushFile(
-    accessToken: string,
-    owner: string,
-    repo: string,
-    path: string,
-    content: string,
-    message: string,
-    sha?: string, // Include SHA for updates
-    branch: string = config.DEFAULT_BRANCH
-): Promise<{ commitSha: string; htmlUrl: string }> {
-    const body: any = {
-        message,
-        content: btoa(unescape(encodeURIComponent(content))), // Base64 encode content
-        branch,
-    };
-
-    if (sha) {
-        body.sha = sha;
-    }
-
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-        method: 'PUT',
+async function createBlob(accessToken: string, owner: string, repo: string, content: string): Promise<string> {
+    // Content here is plain text; GitHub expects UTF-8 string or Base64.
+    // We'll trust GitHub to handle the JSON encoding for 'utf-8'.
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs`, {
+        method: 'POST',
         headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Accept': 'application/vnd.github+json',
             'X-GitHub-Api-Version': '2022-11-28',
-        },
-        body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Failed to push file ${path}: ${response.statusText} - ${JSON.stringify(errorData)}`);
-    }
-
-    const data = await response.json();
-    return {
-        commitSha: data.commit.sha,
-        htmlUrl: data.content.html_url,
-    };
-}
-
-// --- Git: Delete File ---
-
-export async function deleteFile(
-    accessToken: string,
-    owner: string,
-    repo: string,
-    path: string,
-    message: string,
-    sha: string,
-    branch: string = config.DEFAULT_BRANCH
-): Promise<{ commitSha: string }> {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-        method: 'DELETE',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Accept': 'application/vnd.github+json',
-            'X-GitHub-Api-Version': '2022-11-28',
+            'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            message,
-            sha,
-            branch,
+            content: content,
+            encoding: 'utf-8',
         }),
     });
 
     if (!response.ok) {
-        throw new Error(`Failed to delete file ${path}: ${response.statusText}`);
+        throw new Error(`Failed to create blob: ${response.statusText}`);
     }
 
     const data = await response.json();
-    return {
-        commitSha: data.commit.sha,
-    };
+    return data.sha;
+}
+
+// Helper to get HEAD SHA for branch
+async function getRef(accessToken: string, owner: string, repo: string, branch: string): Promise<{ sha: string; url: string }> {
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${branch}`, {
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/vnd.github+json',
+        },
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to get ref heads/${branch}: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return { sha: data.object.sha, url: data.object.url };
+}
+
+async function createTree(accessToken: string, owner: string, repo: string, baseTreeSha: string, treeItems: any[]): Promise<string> {
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            base_tree: baseTreeSha,
+            tree: treeItems,
+        }),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to create tree: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data.sha;
+}
+
+async function createCommit(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    message: string,
+    treeSha: string,
+    parents: string[],
+    author: { name: string; email: string; date?: string }
+): Promise<string> {
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            message,
+            tree: treeSha,
+            parents,
+            author, // Inject author here
+        }),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to create commit: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data.sha;
+}
+
+async function updateRef(accessToken: string, owner: string, repo: string, branch: string, sha: string): Promise<void> {
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
+        method: 'PATCH',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            sha,
+            force: false,
+        }),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to update ref heads/${branch}: ${response.statusText}`);
+    }
+}
+
+
+// --- Main: Push Changes (Atomic) ---
+
+export async function pushChanges(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    branch: string,
+    message: string,
+    diffs: FileDiff[],
+    selectedPaths: string[]
+): Promise<CommitResult> {
+    if (commitInFlight) {
+        throw new Error('A commit is already in progress. Please wait.');
+    }
+
+    // 1. Idempotency Check
+    const filteredDiffs = diffs.filter(d => selectedPaths.includes(d.path));
+    if (filteredDiffs.length === 0) {
+        throw new Error('No files selected to commit.');
+    }
+
+    const currentHash = await computeCommitHash(message, filteredDiffs);
+    if (currentHash === lastCommitHash) {
+        console.warn('Idempotency prevented duplicate commit.');
+        throw new Error('This commit has already been processed (duplicate submission prevented).');
+    }
+
+    commitInFlight = true;
+
+    try {
+        // 2. Fetch User Profile (Author)
+        // Pass repo owner as fallback hint
+        const user = await getUserProfile(accessToken, owner);
+        const authorEmail = user.email || `${user.id}+${user.login}@users.noreply.github.com`;
+        const authorName = user.name || user.login;
+
+        // 3. Get HEAD
+        const headRef = await getRef(accessToken, owner, repo, branch);
+        const headSha = headRef.sha;
+
+        // 4. Create Blobs & Prepare Tree Items
+        const treeItems = [];
+
+        for (const diff of filteredDiffs) {
+            if (diff.status === 'deleted') {
+                // For delete, we add to tree with sha: null (or omit sha?? GitHub API says remove using sha: null in update??
+                // Actually, Git Database API: "If you want to delete a file... set sha to null"
+                // Ref: https://docs.github.com/en/rest/git/trees?apiVersion=2022-11-28#create-a-tree
+                treeItems.push({
+                    path: diff.path,
+                    mode: '100644', // Placeholder mode, technically ignored for deletes but good form
+                    type: 'blob',
+                    sha: null, // Critical for deletion
+                });
+            } else {
+                // Added or Modified
+                if (!diff.newContent) {
+                    throw new Error(`Missing content for ${diff.path}`);
+                }
+                const blobSha = await createBlob(accessToken, owner, repo, diff.newContent);
+                treeItems.push({
+                    path: diff.path,
+                    mode: '100644', // Text file mode
+                    type: 'blob',
+                    sha: blobSha,
+                });
+            }
+        }
+
+        // 5. Create Tree
+        const newTreeSha = await createTree(accessToken, owner, repo, headSha, treeItems);
+
+        // 6. Create Commit
+        // Note: githubService uses ISO dates, creating one is fine
+        const commitSha = await createCommit(accessToken, owner, repo, message, newTreeSha, [headSha], {
+            name: authorName,
+            email: authorEmail,
+            date: new Date().toISOString(),
+        });
+
+        // 7. Update Ref (Move HEAD)
+        await updateRef(accessToken, owner, repo, branch, commitSha);
+
+        // Success!
+        lastCommitHash = currentHash; // Store hash to prevent replay
+
+        return {
+            commitSha,
+            htmlUrl: `https://github.com/${owner}/${repo}/commit/${commitSha}`,
+        };
+
+    } finally {
+        commitInFlight = false;
+    }
 }

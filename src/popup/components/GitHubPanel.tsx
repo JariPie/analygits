@@ -7,8 +7,7 @@ import CommitMessageEditor from './CommitMessageEditor';
 import {
     type FileDiff,
     getRepoTree,
-    pushFile,
-    deleteFile,
+    pushChanges,
     getFileContent,
 } from '../services/githubService';
 import { getDeepestSharedScope } from '../utils/scopeCalculator';
@@ -174,67 +173,33 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
         setPushLoading(true);
         setError(null);
 
-        // Re-build local tree to ensure we have content for Pushes
-        // (Diffs might not have newContent if it was Unchanged, but we filter diffs anyway)
-        const localTree = buildVirtualStoryTree(parsedContent!);
-
-        let successCount = 0;
-        let failCount = 0;
-
         try {
             const token = await getAccessToken();
 
-            for (const diff of diffs) {
-                if (!selectedPaths.includes(diff.path)) continue;
+            const result = await pushChanges(
+                token,
+                selectedRepo.owner.login,
+                selectedRepo.name,
+                branch,
+                commitMessage,
+                diffs,
+                selectedPaths
+            );
 
-                try {
-                    if (diff.status === 'deleted') {
-                        await deleteFile(
-                            token,
-                            selectedRepo.owner.login,
-                            selectedRepo.name,
-                            diff.path,
-                            commitMessage,
-                            diff.sha!,
-                            branch
-                        );
-                    } else {
-                        // For Added/Modified, we need the content
-                        const content = localTree.get(diff.path)?.content;
-                        if (content === undefined) {
-                            throw new Error(t('github.errors.contentNotFound', { path: diff.path }));
-                        }
-
-                        await pushFile(
-                            token,
-                            selectedRepo.owner.login,
-                            selectedRepo.name,
-                            diff.path,
-                            content,
-                            commitMessage,
-                            diff.sha,
-                            branch
-                        );
-                    }
-                    successCount++;
-                } catch (err: any) {
-                    console.error(`Failed to push ${diff.path}:`, err);
-                    failCount++;
-                }
-            }
-
-            setPushStatus({ success: successCount, failed: failCount });
+            setPushStatus({ success: selectedPaths.length, failed: 0 });
+            console.log('Committed as', result.commitSha);
 
             // Refresh diffs after push
-            if (successCount > 0) {
-                await handleFetchDiff();
-            }
+            await handleFetchDiff();
+
         } catch (err: any) {
+            console.error('Push failed:', err);
             setError(err.message);
+            setPushStatus({ success: 0, failed: selectedPaths.length });
         } finally {
             setPushLoading(false);
         }
-    }, [selectedRepo, diffs, selectedPaths, commitMessage, isCommitValid, branch, getAccessToken, parsedContent, handleFetchDiff]);
+    }, [selectedRepo, diffs, selectedPaths, commitMessage, isCommitValid, branch, getAccessToken, handleFetchDiff]);
 
     if (status !== 'connected') {
         return null;

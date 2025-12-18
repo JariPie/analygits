@@ -39,8 +39,7 @@
             "noContent": "No content found in story to diff.",
             "noStoryPath": "Failed to determine story path.",
             "invalidCommit": "Please provide a valid commit message.",
-            "diffFailed": "Failed to compute diffs.",
-            "contentNotFound": "Content not found for {{path}}"
+            "diffFailed": "Failed to compute diffs."
         },
         "actions": {
             "fetchDiff": "Fetch & Diff",

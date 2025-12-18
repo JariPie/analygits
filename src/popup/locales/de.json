@@ -39,8 +39,7 @@
             "noContent": "Kein Inhalt in der Story zum Vergleichen gefunden.",
             "noStoryPath": "Story-Pfad konnte nicht ermittelt werden.",
             "invalidCommit": "Bitte geben Sie eine gültige Commit-Nachricht ein.",
-            "diffFailed": "Fehler beim Berechnen der Unterschiede.",
-            "contentNotFound": "Inhalt nicht gefunden für {{path}}"
+            "diffFailed": "Fehler beim Berechnen der Unterschiede."
         },
         "actions": {
             "fetchDiff": "Abrufen & Vergleichen",
@@ -117,6 +116,7 @@
         "loading": "Lädt...",
         "error": "Fehler",
         "fetch": "Abrufen",
+        "refresh": "Aktualisieren",
         "save": "Speichern",
         "cancel": "Abbrechen",
         "yes": "Ja",

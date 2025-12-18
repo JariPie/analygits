@@ -18,7 +18,7 @@
             "fetchNewStory": "Fetch New Story"
         },
         "errors": {
-            "sacSessionTimeout": "SAC Session Timed Out. Please log in to SAP Analytics Cloud in a new tab and try again.",
+            "sacSessionTimeout": "SAC Session Timed Out. Please log in to SAP Analytics Cloud in a new tab or refresh the page and try again.",
             "sacParseFailed": "Failed to parse initial JSON response from SAC.",
             "sacEmptyResponse": "Invalid SAC Story response: Response is empty or null."
         },

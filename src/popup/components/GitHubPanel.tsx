@@ -206,6 +206,25 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent: initialContent
 
     const hasDiffs = diffs.length > 0;
 
+    // --- Skeleton Loader Component ---
+    const SkeletonDiffLoader = () => (
+        <div style={{ marginTop: '1rem' }}>
+            {/* Diff Items Skeleton */}
+            {[1, 2, 3].map((i) => (
+                <div key={i} className="skeleton-diff-item">
+                    <div className="skeleton-badge skeleton-pulse" />
+                    <div className="skeleton-text skeleton-pulse" />
+                </div>
+            ))}
+
+            {/* Commit Area Skeleton */}
+            <div className="commit-section" style={{ borderTop: 'none', paddingTop: 0 }}>
+                <div className="skeleton-editor skeleton-pulse" />
+                <div className="skeleton-button skeleton-pulse" />
+            </div>
+        </div>
+    );
+
     return (
         <div className="github-panel card">
             {/* Repo Picker */}
@@ -214,27 +233,29 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent: initialContent
             {/* Diff Section */}
             {selectedRepo && (
                 <div className="github-diff-section">
-                    {!hasDiffs && (
+                    {diffLoading ? (
+                        <SkeletonDiffLoader />
+                    ) : !hasDiffs ? (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1rem' }}>
                             <button
                                 className="primary-button"
                                 onClick={handleFetchDiff}
-                                disabled={diffLoading || !initialContent}
+                                disabled={!initialContent}
                             >
-                                {diffLoading ? t('common.loading') : t('github.actions.fetchDiff')}
+                                {t('github.actions.fetchDiff')}
                             </button>
 
-                            {hasCheckedDiff && !diffLoading && !error && (
+                            {hasCheckedDiff && !error && (
                                 <div className="success-message" style={{ marginTop: '0.5rem' }}>
                                     {t('github.status.upToDate')}
                                 </div>
                             )}
                         </div>
-                    )}
+                    ) : null}
 
                     {error && <div className="error-message">{error}</div>}
 
-                    {diffs.length > 0 && (
+                    {!diffLoading && diffs.length > 0 && (
                         <>
                             <DiffViewer diffs={diffs} onFileSelect={setSelectedPaths} />
 

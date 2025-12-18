@@ -817,3 +817,59 @@ body {
     background: #fee2e2;
     color: var(--error);
 }
+
+/* Skeleton Loader */
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.skeleton-pulse {
+    animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    background-color: var(--muted);
+}
+
+.skeleton-diff-item {
+    height: 48px;
+    margin-bottom: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: white;
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+}
+
+.skeleton-badge {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    margin-right: 0.5rem;
+}
+
+.skeleton-text {
+    height: 12px;
+    width: 70%;
+    border-radius: 4px;
+}
+
+.skeleton-editor {
+    height: 120px;
+    margin-top: 1.5rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+
+.skeleton-button {
+    height: 36px;
+    margin-top: 1rem;
+    border-radius: 6px;
+    width: 100%;
+}

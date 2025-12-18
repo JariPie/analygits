@@ -240,23 +240,28 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
         return null;
     }
 
+    // Check if we have visible diffs to toggle between Button and Refresh Icon
+    const hasDiffs = diffs.length > 0;
+
     return (
         <div className="github-panel card">
             {/* Repo Picker */}
-            <RepoPicker />
+            <RepoPicker onRefresh={hasDiffs ? handleFetchDiff : undefined} />
 
             {/* Diff Section */}
             {selectedRepo && (
                 <div className="github-diff-section">
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-                        <button
-                            className="primary-button"
-                            onClick={handleFetchDiff}
-                            disabled={diffLoading || !parsedContent}
-                        >
-                            {diffLoading ? t('common.loading') : t('github.actions.fetchDiff')}
-                        </button>
-                    </div>
+                    {!hasDiffs && (
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                            <button
+                                className="primary-button"
+                                onClick={handleFetchDiff}
+                                disabled={diffLoading || !parsedContent}
+                            >
+                                {diffLoading ? t('common.loading') : t('github.actions.fetchDiff')}
+                            </button>
+                        </div>
+                    )}
 
                     {error && <div className="error-message">{error}</div>}
 

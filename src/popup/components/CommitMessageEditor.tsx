@@ -110,34 +110,6 @@ const CommitMessageEditor: React.FC<CommitMessageEditorProps> = ({
         }
     }, [suggestedScope, editor]);
 
-    // Auto-focus on the type field when editor mounts
-    useEffect(() => {
-        if (editor && !editor.isFocused) {
-            // Slightly longer delay to ensure DOM is fully ready
-            const timer = setTimeout(() => {
-                // Find the commitType node and focus inside it
-                const doc = editor.state.doc;
-                let typePos = -1;
-
-                doc.descendants((node, pos) => {
-                    if (node.type.name === 'commitType') {
-                        typePos = pos;
-                        return false;
-                    }
-                });
-
-                if (typePos !== -1) {
-                    editor.chain().focus(typePos + 1).run();
-                } else {
-                    // Fallback: focus at the start
-                    editor.commands.focus('start');
-                }
-            }, 100);
-
-            return () => clearTimeout(timer);
-        }
-    }, [editor]);
-
     if (!editor) {
         return null;
     }

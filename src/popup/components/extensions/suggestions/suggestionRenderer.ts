@@ -107,6 +107,22 @@ export function createSuggestionRenderer() {
             floatingEl.appendChild(component.element as HTMLElement);
             document.body.appendChild(floatingEl);
 
+            // Handle click outside
+            const handleClickOutside = (event: MouseEvent) => {
+                const target = event.target as Node;
+                // If click is outside the dropdown AND outside the editor (blur), close it
+                if (floatingEl && !floatingEl.contains(target) && !props.editor.view.dom.contains(target)) {
+                    cleanup?.();
+                    cleanup = null;
+                    floatingEl?.remove();
+                    component?.destroy();
+                    floatingEl = null;
+                    component = null;
+                }
+            };
+
+            document.addEventListener('mousedown', handleClickOutside);
+
             // 1. Initial position update
             // 2. Setup autoUpdate for scroll/resize
             const update = () => {
@@ -117,9 +133,14 @@ export function createSuggestionRenderer() {
             update();
 
             // Start autoUpdate
-            cleanup = autoUpdate(virtualEl, floatingEl, update, {
+            const floatingCleanup = autoUpdate(virtualEl, floatingEl, update, {
                 animationFrame: true,
             });
+
+            cleanup = () => {
+                document.removeEventListener('mousedown', handleClickOutside);
+                floatingCleanup();
+            };
         },
 
         onUpdate: (props: any) => {

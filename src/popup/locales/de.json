@@ -17,6 +17,11 @@
             "newStoryDetected": "Neue Story entdeckt: {{name}}",
             "fetchNewStory": "Neue Story abrufen"
         },
+        "errors": {
+            "sacSessionTimeout": "SAC-Sitzung abgelaufen. Bitte melden Sie sich in einem neuen Tab bei der SAP Analytics Cloud an und versuchen Sie es erneut.",
+            "sacParseFailed": "Das initiale JSON der SAC konnte nicht verarbeitet werden.",
+            "sacEmptyResponse": "Ungültige SAC Story Antwort: Antwort ist leer oder null."
+        },
         "debug": {
             "title": "Debug-Info",
             "pages": "Seiten:",

@@ -421,11 +421,25 @@ export function parseSacStory(jsonString: string): ParsedStoryContent {
         console.log("Parsed SAC Response:", data);
     } catch (e) {
         console.error("Raw response:", jsonString);
-        throw new Error("Failed to parse initial JSON response from SAC.");
+
+        // Check for HTML / Timeout indicators in the raw response
+        const trimmed = jsonString.trim().toLowerCase();
+        if (
+            trimmed.startsWith("<html") ||
+            trimmed.startsWith("<!doctype html") ||
+            trimmed.includes("sitzung beendet") || // German
+            trimmed.includes("session terminated") || // English
+            trimmed.includes("session timeout") ||
+            trimmed.includes("login")
+        ) {
+            throw new Error("SAC_SESSION_TIMEOUT");
+        }
+
+        throw new Error("SAC_PARSE_FAILED");
     }
 
     if (!data) {
-        throw new Error("Invalid SAC Story response: Response is empty or null.");
+        throw new Error("SAC_EMPTY_RESPONSE");
     }
 
     let resource = data;

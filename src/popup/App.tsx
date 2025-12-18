@@ -149,7 +149,19 @@ function App() {
 
     } catch (err: any) {
       console.error(err);
-      setError(err.toString());
+      let errorMessage = err.message || err.toString();
+
+      const errorMap: Record<string, string> = {
+        "SAC_SESSION_TIMEOUT": "app.errors.sacSessionTimeout",
+        "SAC_PARSE_FAILED": "app.errors.sacParseFailed",
+        "SAC_EMPTY_RESPONSE": "app.errors.sacEmptyResponse"
+      };
+
+      if (errorMap[errorMessage]) {
+        errorMessage = t(errorMap[errorMessage]);
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false)
     }

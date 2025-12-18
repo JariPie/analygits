@@ -262,19 +262,35 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     }
 });
 
-// Listener for tab updates to detect SAC Stories
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete' && tab.url) {
-        // Check for Story ID in query param OR in hash path (e.g. /s2/ID/)
-        const isStory = tab.url.includes("storyId=") ||
-            (tab.url.includes("/story2&/s2/") && tab.url.includes("sap/fpa/ui")) ||
-            (tab.url.includes("mode=present") && tab.url.includes("/story"));
+// --- Visual State Management ---
 
-        if (isStory) {
-            chrome.action.setBadgeText({ text: "SAC", tabId: tabId });
-            chrome.action.setBadgeBackgroundColor({ color: "#0a6ed1", tabId: tabId });
-        } else {
-            chrome.action.setBadgeText({ text: "", tabId: tabId });
+function resetIconState(tabId: number) {
+    chrome.action.setBadgeText({ text: "", tabId });
+    chrome.action.setIcon({
+        tabId,
+        path: {
+            "16": "icons/16x16.png",
+            "32": "icons/32x32.png",
+            "48": "icons/48x48.png",
+            "128": "icons/128x128.png"
         }
+    }).catch(() => { });
+}
+
+// Listener for tab updates
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    // Ensure any custom Visuals are cleared
+    if (changeInfo.status === 'complete' || changeInfo.url) {
+        resetIconState(tabId);
     }
+});
+
+// Listener for tab activation
+chrome.tabs.onActivated.addListener((activeInfo) => {
+    resetIconState(activeInfo.tabId);
+});
+
+// Cleanup (just in case)
+chrome.tabs.onRemoved.addListener(() => {
+    // No-op, state is cleaned up by browser
 });

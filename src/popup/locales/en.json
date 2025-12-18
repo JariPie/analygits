@@ -47,7 +47,8 @@
             "pushFiles": "Push {{count}} file(s)"
         },
         "status": {
-            "pushResult": "{{success}} succeeded, {{failed}} failed"
+            "pushResult": "{{success}} succeeded, {{failed}} failed",
+            "upToDate": "Everything is up to date. No changes found."
         }
     },
     "meta": {

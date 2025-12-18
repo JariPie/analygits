@@ -107,10 +107,11 @@ function App() {
     });
   }, [isStorageLoaded]);
 
-  const handleFetch = async (fetchUrl: string, fetchStoryId?: string) => {
+  const handleFetch = async (fetchUrl: string, fetchStoryId?: string): Promise<ParsedStoryContent | null> => {
     setLoading(true)
     setError(null)
-    setParsedContent(null)
+    // Don't clear parsedContent here to prevent unmounting GitHubPanel during refresh
+    // setParsedContent(null)
 
     try {
       let fetchOptions: any = { type: "FETCH_DATA", url: fetchUrl };
@@ -146,6 +147,7 @@ function App() {
 
       const parsed = parseSacStory(response.data);
       setParsedContent(parsed);
+      return parsed;
 
     } catch (err: any) {
       console.error(err);
@@ -162,6 +164,7 @@ function App() {
       }
 
       setError(errorMessage);
+      return null;
     } finally {
       setLoading(false)
     }
@@ -174,6 +177,11 @@ function App() {
   const handleRefresh = () => {
     const customStoryId = isDifferentStory ? storyId : (parsedContent?.id || storyId);
     handleFetch(url, customStoryId);
+  };
+
+  const fetchLatestStory = async (): Promise<ParsedStoryContent | null> => {
+    const customStoryId = isDifferentStory ? storyId : (parsedContent?.id || storyId);
+    return await handleFetch(url, customStoryId);
   };
 
   return (
@@ -226,7 +234,7 @@ function App() {
         {isStoryLoaded && (
           <div className="content-stack">
             <StoryViewer content={parsedContent} onRefresh={handleRefresh} />
-            <GitHubPanel parsedContent={parsedContent} />
+            <GitHubPanel parsedContent={parsedContent} onFetchLatest={fetchLatestStory} />
           </div>
         )}
       </main>

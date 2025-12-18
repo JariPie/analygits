@@ -47,7 +47,8 @@
             "pushFiles": "{{count}} Datei(en) pushen"
         },
         "status": {
-            "pushResult": "{{success}} erfolgreich, {{failed}} fehlgeschlagen"
+            "pushResult": "{{success}} erfolgreich, {{failed}} fehlgeschlagen",
+            "upToDate": "Alles auf dem neuesten Stand. Keine Änderungen gefunden."
         }
     },
     "meta": {

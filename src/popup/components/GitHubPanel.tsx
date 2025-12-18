@@ -18,11 +18,17 @@ import type { ParsedStoryContent } from '../utils/sacParser';
 
 interface GitHubPanelProps {
     parsedContent: ParsedStoryContent | null;
+    onFetchLatest: () => Promise<ParsedStoryContent | null>;
 }
 
-const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
+const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent: initialContent, onFetchLatest }) => {
     const { t } = useTranslation();
     const { status, getAccessToken, selectedRepo, branch } = useAuth();
+
+    // Use local state if we want, but actually we should just rely on what returns from fetch
+    // or fallback to initialContent if needed.
+    // However, App.tsx updates parsedContent state anyway, so initialContent will update eventually.
+    // But for THIS function execution, we need the return value of onFetchLatest.
 
     const [diffs, setDiffs] = useState<FileDiff[]>([]);
     const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
@@ -32,16 +38,25 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
     const [pushLoading, setPushLoading] = useState(false);
     const [pushStatus, setPushStatus] = useState<{ success: number; failed: number } | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [hasCheckedDiff, setHasCheckedDiff] = useState(false);
 
-    // --- Scope Suggestion ---
     const suggestedScope = useMemo(() => {
         return getDeepestSharedScope(selectedPaths);
     }, [selectedPaths]);
 
+    // Reset state when repo changes
+    React.useEffect(() => {
+        setDiffs([]);
+        setHasCheckedDiff(false);
+        setError(null);
+        setPushStatus(null);
+    }, [selectedRepo?.id]);
+
 
     // --- Fetch & Diff ---
     const handleFetchDiff = useCallback(async () => {
-        if (!parsedContent || !selectedRepo) {
+        // We allow starting if we have initialContent, but we'll refresh it immediately.
+        if (!initialContent || !selectedRepo) {
             setError(t('github.errors.fetchFirst'));
             return;
         }
@@ -51,83 +66,70 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
         setDiffs([]);
         setPushStatus(null);
         setSelectedPaths([]);
+        setHasCheckedDiff(false);
 
         try {
+            // 0. Refresh Data from SAC (Critical for "Current State")
+            const freshContent = await onFetchLatest();
+            if (!freshContent) {
+                throw new Error(t('app.errors.sacEmptyResponse') || "Failed to refresh story content from SAC.");
+            }
+
             const token = await getAccessToken();
 
-            // 1. Build Local Tree
-            const localTree = buildVirtualStoryTree(parsedContent);
+            // 1. Build Local Tree (using FRESH content)
+            const localTree = buildVirtualStoryTree(freshContent);
 
             // 2. Fetch Remote Tree Structure
             const treeItems = await getRepoTree(token, selectedRepo.owner.login, selectedRepo.name, branch);
 
             // 3. Filter relevant remote files and construct RepoTree
-            // We only care about files that differ or exist in our local tree scope
-            // For now, let's just get everything? No, that's too much for a big repo.
-            // We only care about files inside `stories/<StoryName>`? 
-            // Yes, strictly scoped.
-
-            // Determine the base path of the story
-            // HACK: inspect one local file to guess base path or reuse logic
-            // `localTree` has keys like `stories/My_Story/README.md`
             if (localTree.size === 0) {
                 setError(t('github.errors.noContent'));
                 return;
             }
-            const firstPath = localTree.keys().next().value; // e.g. stories/X/README.md
+            const firstPath = localTree.keys().next().value;
             if (!firstPath) {
                 setError(t('github.errors.noStoryPath'));
                 return;
             }
-            const storyDir = firstPath.split('/').slice(0, 2).join('/'); // "stories/X"
+            const storyDir = firstPath.split('/').slice(0, 2).join('/');
 
             const repoTree: RepoTree = new Map();
 
-            // Identify files to fetch:
-            // - Files in local tree (to check for modification)
-            // - Files in remote tree under `storyDir` (to check for deletion)
-
+            // Identify files to fetch
             const pathsToFetch = new Set<string>();
             const remoteItemMap = new Map(treeItems.map(item => [item.path, item]));
 
-            // Add local paths that exist remotely
             for (const path of localTree.keys()) {
                 if (remoteItemMap.has(path)) {
                     pathsToFetch.add(path);
                 }
             }
 
-            // Add remote paths that are in the story dir (for potential deletion)
             for (const item of treeItems) {
                 if (item.path.startsWith(storyDir + '/') && item.type === 'blob') {
                     pathsToFetch.add(item.path);
                 }
             }
 
-            // Concurrency Limit
+            // Concurrency
             const CONCURRENCY = 5;
-
             const fetchFile = async (path: string, sha: string) => {
                 try {
                     const content = await getFileContent(token, selectedRepo.owner.login, selectedRepo.name, sha);
                     repoTree.set(path, { path, content, sha });
                 } catch (e) {
-                    console.error(`Failed to fetch ${path}`, e);
-                    // Treat as missing in repo tree (will show as added if local exists, or ignore)
+                    // Ignore missing
                 }
             };
 
-            // Execute fetches with concurrency control
             const queue = Array.from(pathsToFetch);
-
-            // Helper to run queue
             const runQueue = async () => {
                 while (queue.length > 0) {
                     const path = queue.shift()!;
                     const item = remoteItemMap.get(path);
-                    if (item) {
-                        await fetchFile(path, item.sha);
-                    }
+                    if (item) await fetchFile(path, item.sha);
                 }
             };
 
@@ -137,9 +139,6 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
             // 4. Compute Diffs
             const computedDiffs = diffTrees(localTree, repoTree);
 
-            // 5. Update State
-            // Map diff-engine Types to UI Types (FileDiff from githubService is compatible with DiffEntry mostly)
-            // DiffAdapter: DiffEntry -> FileDiff
             const uiDiffs: FileDiff[] = computedDiffs.map(d => ({
                 path: d.path,
                 status: d.status,
@@ -149,7 +148,8 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
             }));
 
             setDiffs(uiDiffs);
-            setSelectedPaths(uiDiffs.map(d => d.path)); // Select all by default
+            setSelectedPaths(uiDiffs.map(d => d.path));
+            setHasCheckedDiff(true);
 
         } catch (err: any) {
             console.error(err);
@@ -157,14 +157,13 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
         } finally {
             setDiffLoading(false);
         }
-    }, [parsedContent, selectedRepo, branch, getAccessToken]);
+    }, [initialContent, selectedRepo, branch, getAccessToken, onFetchLatest]);
 
 
     // --- Push Changes ---
     const handlePush = useCallback(async () => {
         if (!selectedRepo || diffs.length === 0) return;
 
-        // Message is now single string from editor
         if (!commitMessage || !isCommitValid) {
             setError(t('github.errors.invalidCommit'));
             return;
@@ -199,13 +198,12 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
         } finally {
             setPushLoading(false);
         }
-    }, [selectedRepo, diffs, selectedPaths, commitMessage, isCommitValid, branch, getAccessToken, handleFetchDiff]);
+    }, [selectedRepo, diffs, selectedPaths, commitMessage, isCommitValid, branch, getAccessToken, handleFetchDiff, initialContent]);
 
     if (status !== 'connected') {
         return null;
     }
 
-    // Check if we have visible diffs to toggle between Button and Refresh Icon
     const hasDiffs = diffs.length > 0;
 
     return (
@@ -217,14 +215,20 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent }) => {
             {selectedRepo && (
                 <div className="github-diff-section">
                     {!hasDiffs && (
-                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1rem' }}>
                             <button
                                 className="primary-button"
                                 onClick={handleFetchDiff}
-                                disabled={diffLoading || !parsedContent}
+                                disabled={diffLoading || !initialContent}
                             >
                                 {diffLoading ? t('common.loading') : t('github.actions.fetchDiff')}
                             </button>
+
+                            {hasCheckedDiff && !diffLoading && !error && (
+                                <div className="success-message" style={{ marginTop: '0.5rem' }}>
+                                    {t('github.status.upToDate')}
+                                </div>
+                            )}
                         </div>
                     )}
 

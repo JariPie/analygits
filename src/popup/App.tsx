@@ -13,7 +13,7 @@ function App() {
   const { t } = useTranslation();
 
   // Initialize language preference
-  const { language, setLanguage } = useLanguagePreference();
+  const { language, setLanguage, isLoaded: isLanguageLoaded } = useLanguagePreference();
 
   const [loading, setLoading] = useState(false)
   const [parsedContent, setParsedContent] = useState<ParsedStoryContent | null>(null)
@@ -183,6 +183,12 @@ function App() {
     const customStoryId = isDifferentStory ? storyId : (parsedContent?.id || storyId);
     return await handleFetch(url, customStoryId);
   };
+
+  // Block render until essential initialization is complete
+  // This prevents the brief "small popup" flash during async loading
+  if (!isStorageLoaded || !isLanguageLoaded) {
+    return null;
+  }
 
   return (
     <div className={`app-container ${isSettingsOpen ? 'modal-open' : ''}`}>

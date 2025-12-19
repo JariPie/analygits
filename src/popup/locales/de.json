@@ -45,7 +45,7 @@
             "fetchDiff": "Abrufen & Vergleichen",
             "pushing": "Pushen...",
             "pushFiles": "{{count}} Datei(en) pushen",
-            "revert": "In SAC wiederherstellen"
+            "revert": "Wiederherstellen"
         },
         "warnings": {
             "revertConfirm": "Möchten Sie '{{path}}' wirklich in der SAC wiederherstellen? Dies überschreibt den aktuellen Inhalt in der SAC mit der Version von GitHub."

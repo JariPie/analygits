@@ -45,7 +45,7 @@
             "fetchDiff": "Fetch & Diff",
             "pushing": "Pushing...",
             "pushFiles": "Push {{count}} file(s)",
-            "revert": "Revert to SAC"
+            "revert": "Revert"
         },
         "warnings": {
             "revertConfirm": "Are you sure you want to revert '{{path}}' in SAC? This will overwrite the current content in SAC with the version from GitHub."

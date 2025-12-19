@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
   build: {
     outDir: 'dist',
@@ -19,10 +19,29 @@ export default defineConfig({
       }
     },
     chunkSizeWarningLimit: 1000,
+    // SECURITY: Strip console logs in production builds
+    // This prevents leaking sensitive debug info in the Chrome Web Store version
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        // Only strip in production mode
+        drop_console: mode === 'production',
+        drop_debugger: mode === 'production',
+        // Keep console.warn and console.error for important runtime issues
+        pure_funcs: mode === 'production'
+          ? ['console.log', 'console.debug', 'console.info']
+          : [],
+      },
+    },
   },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
     },
   },
-})
+  // Define environment variables
+  define: {
+    // Expose build mode to runtime code
+    '__DEV__': mode !== 'production',
+  },
+}))

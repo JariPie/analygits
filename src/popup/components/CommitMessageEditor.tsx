@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { CommitEditorExtensions } from './extensions';
 import { serializeCommitMessage, validateCommitMessage } from '../utils/commitSerializer';
@@ -144,7 +144,12 @@ const CommitMessageEditor: React.FC<CommitMessageEditorProps> = ({
             )}
 
             <div className="editor-help">
-                <small dangerouslySetInnerHTML={{ __html: t('editor.help') }} />
+                <small>
+                    <Trans
+                        i18nKey="editor.help"
+                        components={{ code: <code /> }}
+                    />
+                </small>
             </div>
         </div>
     );

@@ -164,49 +164,34 @@ export function patchStoryContentWithGitHubFile(params: {
     if (target.kind === 'globalFunction') {
         const instanceId = getSingleInstanceId(target.objectFolder!, "Script Object");
 
-        // instanceId for script object is like: "Application...something...{\"scriptObject\":\"<uuid>\"}"
-        // We need to parse out the UUID.
-        let scriptObjectUuid: string | null = null;
-        try {
-            // It's often a composite ID string.
-            // Check if it contains JSON.
-            // But wait, user prompt says: "instanceId contains {\"scriptObject\":\"<uuid>\"}"
-            // It might be part of the string.
-            // E.g. "Start:{\"scriptObject\":\"12345\"}"
-            const match = instanceId.match(/"scriptObject":"([^"]+)"/);
-            if (match) {
-                scriptObjectUuid = match[1];
-            }
-        } catch (e) {
-            // ignore
+        // instanceId is the full JSON-encoded string from app.names, e.g.: 
+        // "[{\"scriptObject\":\"14257215-7918-4164-a683-517468166362\"}]"
+        // This matches the instanceId in appEntity.scriptObjects[].instanceId
+
+        console.log(`[revertPatch] Looking for Script Object with instanceId: ${instanceId}`);
+
+        // scriptObjects is inside the appEntity, not at content root level
+        if (!appEntity.scriptObjects || !Array.isArray(appEntity.scriptObjects)) {
+            console.error(`[revertPatch] appEntity has no scriptObjects array. appEntity keys:`, Object.keys(appEntity));
+            throw new Error("Application entity has no scriptObjects array.");
         }
 
-        if (!scriptObjectUuid) {
-            // Fallback: maybe the instanceId IS the UUID? Or some other format?
-            // If we can't extract it, we can't find the payload in scriptObjects[].
-            throw new Error(`Could not extract Script Object UUID from instance ID: ${instanceId}`);
-        }
+        console.log(`[revertPatch] Found ${appEntity.scriptObjects.length} scriptObjects in appEntity`);
 
-        // Find the matching object in content.scriptObjects
-        // content.scriptObjects is an array of objects.
-        // Each has an `id` or `instanceId`? 
-        // User prompt: "Identify the matching scriptObject in scriptObjects[] by scriptObject UUID inside instanceId"
-        // And "entity.scriptObjects[].payload.functionImplementations[functionName]"
-
-        if (!content.scriptObjects || !Array.isArray(content.scriptObjects)) {
-            throw new Error("Story has no scriptObjects array.");
-        }
-
-        const scriptObj = content.scriptObjects.find((so: any) => so.id === scriptObjectUuid);
+        // Match by the full instanceId string (which is the JSON key in app.names)
+        const scriptObj = appEntity.scriptObjects.find((so: any) => so.instanceId === instanceId);
         if (!scriptObj) {
-            throw new Error(`Script Object definition not found for UUID ${scriptObjectUuid}`);
+            // Debug: log what instanceIds we have
+            console.error(`[revertPatch] Available scriptObject instanceIds:`,
+                appEntity.scriptObjects.map((so: any) => so.instanceId));
+            throw new Error(`Script Object not found for instanceId: ${instanceId}`);
         }
 
         if (!scriptObj.payload) scriptObj.payload = {};
         if (!scriptObj.payload.functionImplementations) scriptObj.payload.functionImplementations = {};
 
-        // Patch
-        const oldLen = scriptObj.payload.functionImplementations[target.functionName!].length;
+        // Patch the function implementation
+        const oldLen = scriptObj.payload.functionImplementations[target.functionName!]?.length ?? 0;
         scriptObj.payload.functionImplementations[target.functionName!] = newScriptContent;
         console.log(`[revertPatch] Patched ${target.functionName} on ScriptObject. Size change: ${oldLen} -> ${newScriptContent.length}`);
         return content;
@@ -298,18 +283,9 @@ export function removeContentFromStory(params: {
     if (target.kind === 'globalFunction') {
         const instanceId = getSingleInstanceId(target.objectFolder!, "Script Object");
 
-        let scriptObjectUuid: string | null = null;
-        const match = instanceId.match(/"scriptObject":"([^"]+)"/);
-        if (match) {
-            scriptObjectUuid = match[1];
-        }
-
-        if (!scriptObjectUuid) {
-            throw new Error(`Could not extract Script Object UUID from instance ID: ${instanceId}`);
-        }
-
-        if (content.scriptObjects && Array.isArray(content.scriptObjects)) {
-            const scriptObj = content.scriptObjects.find((so: any) => so.id === scriptObjectUuid);
+        // scriptObjects is inside appEntity, match by full instanceId string
+        if (appEntity.scriptObjects && Array.isArray(appEntity.scriptObjects)) {
+            const scriptObj = appEntity.scriptObjects.find((so: any) => so.instanceId === instanceId);
             if (scriptObj?.payload?.functionImplementations?.[target.functionName!]) {
                 console.log(`[revertPatch] Removing function ${target.functionName} from ScriptObject`);
                 delete scriptObj.payload.functionImplementations[target.functionName!];

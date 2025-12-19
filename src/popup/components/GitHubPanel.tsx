@@ -409,7 +409,7 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent: initialContent
                                     }}
                                     suggestedScope={suggestedScope}
                                 />
-                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', justifyContent: 'center', alignItems: 'center' }}>
 
                                     <button
                                         className="primary-button push-button"

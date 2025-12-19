@@ -1,12 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import {
-    getInstallationToken,
-    revokeDeviceToken,
-    type Repository,
-} from '../services/githubService';
+import { getInstallationToken, revokeDeviceToken, clearCachedUserProfile, type Repository } from '../services/githubService';
 import { config } from '../config';
+import { isTokenExpired, isValidTokenFormat, sanitizeStorageForLogging } from './../../utils/security';
 
-// --- Types ---
+// ============================================================================
+// TYPES
+// ============================================================================
 
 type AuthStatus = 'idle' | 'starting' | 'polling' | 'connected' | 'error';
 
@@ -29,13 +28,91 @@ interface AuthContextValue extends AuthState {
     setBranch: (branch: string) => void;
 }
 
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// --- Storage Keys ---
+// Storage key for persistent auth (device token, repo selection)
+const PERSISTENT_STORAGE_KEY = 'analygits_auth';
 
-const STORAGE_KEY = 'analygits_auth';
+// Storage key for ephemeral auth (access token) - uses session storage when available
+const SESSION_STORAGE_KEY = 'analygits_session';
 
-// --- Provider ---
+// Environment detection
+const IS_DEV = typeof chrome !== 'undefined' &&
+    chrome.runtime?.getManifest &&
+    !('update_url' in chrome.runtime.getManifest());
+
+// ============================================================================
+// LOGGING UTILITIES
+// ============================================================================
+
+function debugLog(message: string, data?: unknown): void {
+    if (IS_DEV) {
+        if (data !== undefined) {
+            // Sanitize sensitive data before logging
+            const sanitized = typeof data === 'object' && data !== null
+                ? sanitizeStorageForLogging(data as Record<string, unknown>)
+                : data;
+            console.log(`[Auth] ${message}`, sanitized);
+        } else {
+            console.log(`[Auth] ${message}`);
+        }
+    }
+}
+
+// ============================================================================
+// SESSION STORAGE HELPERS
+// ============================================================================
+
+/**
+ * Chrome MV3 introduced chrome.storage.session for ephemeral storage
+ * that clears when the browser closes. This is ideal for access tokens.
+ */
+async function getSessionStorage(): Promise<{ accessToken?: string; accessTokenExpiry?: string }> {
+    return new Promise((resolve) => {
+        // Check if session storage is available (Chrome 102+)
+        if (chrome.storage.session) {
+            chrome.storage.session.get([SESSION_STORAGE_KEY], (result) => {
+                resolve(result[SESSION_STORAGE_KEY] || {});
+            });
+        } else {
+            // Fallback: keep in memory only (access token will be re-fetched)
+            resolve({});
+        }
+    });
+}
+
+async function setSessionStorage(data: { accessToken?: string; accessTokenExpiry?: string }): Promise<void> {
+    return new Promise((resolve) => {
+        if (chrome.storage.session) {
+            chrome.storage.session.set({ [SESSION_STORAGE_KEY]: data }, () => {
+                resolve();
+            });
+        } else {
+            // Fallback: no-op, token stays in memory only
+            resolve();
+        }
+    });
+}
+
+async function clearSessionStorage(): Promise<void> {
+    return new Promise((resolve) => {
+        if (chrome.storage.session) {
+            chrome.storage.session.remove([SESSION_STORAGE_KEY], () => {
+                resolve();
+            });
+        } else {
+            resolve();
+        }
+    });
+}
+
+// ============================================================================
+// PROVIDER
+// ============================================================================
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [state, setState] = useState<AuthState>({
@@ -51,88 +128,137 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const pollingRef = useRef<number | null>(null);
 
-    // Load from storage on mount
+    // ========================================================================
+    // LOAD FROM STORAGE ON MOUNT
+    // ========================================================================
+
     useEffect(() => {
-        chrome.storage.local.get([STORAGE_KEY], (result) => {
-            console.log('🔍 Loading auth from storage, key:', STORAGE_KEY);
-            console.log('📦 Raw result:', result);
+        const loadAuth = async () => {
+            // 1. Load persistent data (device token, repo)
+            chrome.storage.local.get([PERSISTENT_STORAGE_KEY], async (result) => {
+                debugLog('Loading persistent auth', result);
 
-            if (result[STORAGE_KEY]) {
-                const stored = result[STORAGE_KEY] as Partial<AuthState>;
-                console.log('✅ Found stored data:', stored);
-                console.log('🔑 Has deviceToken?', !!stored.deviceToken);
+                if (result[PERSISTENT_STORAGE_KEY]) {
+                    const stored = result[PERSISTENT_STORAGE_KEY] as Partial<AuthState>;
 
-                const newStatus = stored.deviceToken ? 'connected' : 'idle';
-                console.log('📊 Setting status to:', newStatus);
+                    // Validate device token format before using
+                    if (stored.deviceToken && !isValidTokenFormat(stored.deviceToken)) {
+                        console.warn('[Auth] Invalid device token format in storage, clearing');
+                        chrome.storage.local.remove([PERSISTENT_STORAGE_KEY]);
+                        return;
+                    }
 
-                setState(prev => ({
-                    ...prev,
-                    deviceToken: stored.deviceToken || null,
-                    deviceTokenExpiry: stored.deviceTokenExpiry || null,
-                    selectedRepo: stored.selectedRepo || null,
-                    branch: stored.branch || config.DEFAULT_BRANCH,
-                    status: newStatus,
-                }));
-            } else {
-                console.log('❌ No data found for key:', STORAGE_KEY);
-            }
-        });
+                    // Check if device token is expired
+                    if (stored.deviceTokenExpiry && isTokenExpired(stored.deviceTokenExpiry)) {
+                        debugLog('Device token expired, clearing');
+                        chrome.storage.local.remove([PERSISTENT_STORAGE_KEY]);
+                        return;
+                    }
+
+                    const newStatus = stored.deviceToken ? 'connected' : 'idle';
+
+                    setState(prev => ({
+                        ...prev,
+                        deviceToken: stored.deviceToken || null,
+                        deviceTokenExpiry: stored.deviceTokenExpiry || null,
+                        selectedRepo: stored.selectedRepo || null,
+                        branch: stored.branch || config.DEFAULT_BRANCH,
+                        status: newStatus,
+                    }));
+
+                    // 2. Try to load session data (access token)
+                    const sessionData = await getSessionStorage();
+                    if (sessionData.accessToken && !isTokenExpired(sessionData.accessTokenExpiry)) {
+                        setState(prev => ({
+                            ...prev,
+                            accessToken: sessionData.accessToken || null,
+                            accessTokenExpiry: sessionData.accessTokenExpiry || null,
+                        }));
+                    }
+                }
+            });
+        };
+
+        loadAuth();
     }, []);
 
-    // Persist to storage on change
+    // ========================================================================
+    // PERSIST TO STORAGE ON CHANGE
+    // ========================================================================
+
     useEffect(() => {
         if (state.deviceToken || state.selectedRepo) {
-            const dataToSave = {
+            // Only persist non-sensitive data to local storage
+            const persistentData = {
                 deviceToken: state.deviceToken,
                 deviceTokenExpiry: state.deviceTokenExpiry,
                 selectedRepo: state.selectedRepo,
                 branch: state.branch,
+                // Note: accessToken is NOT persisted here
             };
 
-            console.log('💾 Saving to storage, key:', STORAGE_KEY);
-            console.log('💾 Data:', dataToSave);
+            debugLog('Saving persistent auth');
 
             chrome.storage.local.set({
-                [STORAGE_KEY]: dataToSave,
-            }, () => {
-                console.log('✅ Save complete');
-                // Verify it was saved
-                chrome.storage.local.get([STORAGE_KEY], (result) => {
-                    console.log('🔍 Verification read:', result);
-                });
+                [PERSISTENT_STORAGE_KEY]: persistentData,
             });
         }
     }, [state.deviceToken, state.deviceTokenExpiry, state.selectedRepo, state.branch]);
 
-    // --- Start Login Flow ---
+    // Persist access token to session storage (ephemeral)
+    useEffect(() => {
+        if (state.accessToken) {
+            setSessionStorage({
+                accessToken: state.accessToken,
+                accessTokenExpiry: state.accessTokenExpiry || undefined,
+            });
+        }
+    }, [state.accessToken, state.accessTokenExpiry]);
+
+    // ========================================================================
+    // START LOGIN FLOW
+    // ========================================================================
+
     const startLogin = useCallback(() => {
-        // Delegate entire flow to background
         setState(prev => ({ ...prev, status: 'starting', error: null }));
 
         chrome.runtime.sendMessage({ type: "GITHUB_CONNECT_START" }, (response) => {
             if (chrome.runtime.lastError) {
-                console.error("Failed to start connect flow:", chrome.runtime.lastError);
-                setState(prev => ({ ...prev, status: 'error', error: 'Failed to notify background worker.' }));
+                console.error("[Auth] Failed to start connect flow:", chrome.runtime.lastError);
+                setState(prev => ({
+                    ...prev,
+                    status: 'error',
+                    error: 'Failed to start authentication. Please try again.'
+                }));
             } else {
-                console.log("🚀 Background flow started:", response);
+                debugLog("Background flow started", response);
             }
         });
     }, []);
 
-    // --- Logout ---
+    // ========================================================================
+    // LOGOUT
+    // ========================================================================
+
     const logout = useCallback(async () => {
+        // Clear cached user profile first to prevent stale data on re-login
+        clearCachedUserProfile();
+
         if (pollingRef.current) {
             clearTimeout(pollingRef.current);
         }
 
+        // Attempt to revoke device token on backend
         if (state.deviceToken) {
             try {
                 await revokeDeviceToken(state.deviceToken);
             } catch (err) {
-                console.warn('Failed to revoke device token:', err);
+                // Log but don't block logout
+                console.warn('[Auth] Failed to revoke device token:', err);
             }
         }
 
+        // Clear state
         setState({
             status: 'idle',
             deviceToken: null,
@@ -144,26 +270,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             error: null,
         });
 
-        chrome.storage.local.remove([STORAGE_KEY, 'githubConnectState']);
+        // Clear all storage
+        chrome.storage.local.remove([PERSISTENT_STORAGE_KEY, 'githubConnectState']);
+        await clearSessionStorage();
+
+        debugLog('Logout complete');
     }, [state.deviceToken]);
 
-    // --- Get Access Token (with caching and rotation handling) ---
+    // ========================================================================
+    // GET ACCESS TOKEN (with caching, validation, and rotation)
+    // ========================================================================
+
     const getAccessToken = useCallback(async (): Promise<string> => {
         // Check if cached token is still valid
         if (state.accessToken && state.accessTokenExpiry) {
-            const expiryDate = new Date(state.accessTokenExpiry);
-            const now = new Date();
-            const bufferMs = 60 * 1000; // 1 minute buffer
-            if (expiryDate.getTime() - now.getTime() > bufferMs) {
+            if (!isTokenExpired(state.accessTokenExpiry, 60000)) { // 1 minute buffer
                 return state.accessToken;
             }
+            debugLog('Access token expired, refreshing');
         }
 
         if (!state.deviceToken) {
             throw new Error('Not authenticated. Please connect to GitHub.');
         }
 
+        // Validate device token format
+        if (!isValidTokenFormat(state.deviceToken)) {
+            // Invalid token, clear and require re-auth
+            await logout();
+            throw new Error('Invalid authentication state. Please reconnect to GitHub.');
+        }
+
         const { accessToken, validUntil, newDeviceToken } = await getInstallationToken(state.deviceToken);
+
+        // Validate received token
+        if (!isValidTokenFormat(accessToken)) {
+            throw new Error('Received invalid access token from server.');
+        }
 
         setState(prev => ({
             ...prev,
@@ -174,9 +317,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }));
 
         return accessToken;
-    }, [state.accessToken, state.accessTokenExpiry, state.deviceToken]);
+    }, [state.accessToken, state.accessTokenExpiry, state.deviceToken, logout]);
 
-    // --- Select Repo ---
+    // ========================================================================
+    // REPO & BRANCH SELECTION
+    // ========================================================================
+
     const selectRepo = useCallback((repo: Repository | null) => {
         setState(prev => ({
             ...prev,
@@ -185,12 +331,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }));
     }, []);
 
-    // --- Set Branch ---
     const setBranch = useCallback((branch: string) => {
-        setState(prev => ({ ...prev, branch }));
+        // Basic validation - more thorough validation happens in security.ts
+        const sanitized = branch.trim();
+        if (sanitized.length > 0 && sanitized.length <= 255) {
+            setState(prev => ({ ...prev, branch: sanitized }));
+        }
     }, []);
 
-    // Cleanup on unmount
+    // ========================================================================
+    // CLEANUP
+    // ========================================================================
+
     useEffect(() => {
         return () => {
             if (pollingRef.current) {
@@ -199,16 +351,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
     }, []);
 
-    // Listen for storage changes & messages from background
+    // ========================================================================
+    // STORAGE CHANGE LISTENERS
+    // ========================================================================
+
     useEffect(() => {
-        // 1. Storage changes (Persistence & Cross-context)
-        const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+        const handleStorageChange = (
+            changes: { [key: string]: chrome.storage.StorageChange },
+            areaName: string
+        ) => {
             if (areaName !== 'local') return;
 
-            // Auth Success
-            if (changes[STORAGE_KEY]) {
-                const newValue = changes[STORAGE_KEY].newValue as Partial<AuthState>;
-                console.log('🔄 Storage changed (Auth):', newValue);
+            // Auth Success from background
+            if (changes[PERSISTENT_STORAGE_KEY]) {
+                const newValue = changes[PERSISTENT_STORAGE_KEY].newValue as Partial<AuthState>;
+                debugLog('Storage changed (Auth)', { hasToken: !!newValue?.deviceToken });
+
                 if (newValue) {
                     setState(prev => ({
                         ...prev,
@@ -224,14 +382,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             // Connection Status (Polling/Waiting)
             if (changes['githubConnectState']) {
-                const connectState = changes['githubConnectState'].newValue as any;
-                console.log('🔄 Storage changed (ConnectState):', connectState);
+                const connectState = changes['githubConnectState'].newValue as {
+                    status?: string;
+                    lastError?: string;
+                };
+
+                debugLog('Storage changed (ConnectState)', { status: connectState?.status });
+
                 if (connectState && !state.deviceToken) {
-                    // Only update status if we aren't already connected
-                    // Map background status to UI status
-                    // "starting" | "waiting-for-install" | "polling" -> "polling" (UI simplified)
                     let uiStatus: AuthStatus = 'idle';
-                    if (['starting', 'waiting-for-install', 'polling'].includes(connectState.status)) {
+                    if (['starting', 'waiting-for-install', 'polling'].includes(connectState.status || '')) {
                         uiStatus = 'polling';
                     } else if (connectState.status === 'connected') {
                         uiStatus = 'connected';
@@ -240,7 +400,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     }
 
                     setState(prev => {
-                        // Don't downgrade 'connected' to 'polling' if race condition
                         if (prev.status === 'connected') return prev;
                         return { ...prev, status: uiStatus, error: connectState.lastError || null };
                     });
@@ -248,15 +407,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         };
 
-        // 2. Direct Messages (Real-time feedback)
-        const handleMessage = (message: any) => {
+        const handleMessage = (message: { type?: string; payload?: unknown }) => {
             if (message.type === "GITHUB_CONNECT_STATUS") {
-                const payload = message.payload as any;
-                console.log("📩 Received Connect Status:", payload);
-                // Similar mapping logic
-                if (!state.deviceToken) {
+                const payload = message.payload as { status?: string; lastError?: string };
+                debugLog("Received Connect Status", { status: payload?.status });
+
+                if (!state.deviceToken && payload) {
                     let uiStatus: AuthStatus = 'idle';
-                    if (['starting', 'waiting-for-install', 'polling'].includes(payload.status)) {
+                    if (['starting', 'waiting-for-install', 'polling'].includes(payload.status || '')) {
                         uiStatus = 'polling';
                     } else if (payload.status === 'connected') {
                         uiStatus = 'connected';
@@ -281,6 +439,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
     }, [state.deviceToken]);
 
+    // ========================================================================
+    // CONTEXT VALUE
+    // ========================================================================
+
     const value: AuthContextValue = {
         ...state,
         startLogin,
@@ -293,7 +455,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// --- Hook ---
+// ============================================================================
+// HOOK
+// ============================================================================
 
 export function useAuth(): AuthContextValue {
     const context = useContext(AuthContext);

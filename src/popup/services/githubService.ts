@@ -1,4 +1,14 @@
 import { config } from '../config';
+import {
+    validateGitHubParams,
+    sanitizeErrorMessage,
+    createUserFriendlyError,
+    ApiError,
+    ValidationError,
+} from '../../utils/security';
+
+// Development mode flag
+const IS_DEV = import.meta.env?.DEV ?? false;
 
 // --- Types ---
 
@@ -89,6 +99,28 @@ async function computeCommitHash(message: string, diffs: FileDiff[]): Promise<st
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// --- Utility: Fetch with Timeout ---
+
+async function fetchWithTimeout(
+    url: string,
+    options: RequestInit,
+    timeoutMs = 30000
+): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+            throw new Error('Request timed out');
+        }
+        throw error;
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
 
 // --- Auth: Install URL ---
 
@@ -126,7 +158,11 @@ export async function pollHandshake(sessionId: string): Promise<HandshakePollRes
 // --- Auth: Get GitHub Installation Access Token ---
 
 export async function getInstallationToken(deviceToken: string): Promise<{ accessToken: string; validUntil: string; newDeviceToken?: string }> {
-    const response = await fetch(`${config.BACKEND_BASE_URL}/api/auth/token`, {
+    if (!deviceToken || typeof deviceToken !== 'string') {
+        throw new ValidationError('deviceToken', 'Device token is required');
+    }
+
+    const response = await fetchWithTimeout(`${config.BACKEND_BASE_URL}/api/auth/token`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${deviceToken}`,
@@ -139,7 +175,11 @@ export async function getInstallationToken(deviceToken: string): Promise<{ acces
         }
 
         const errorText = await response.text();
-        console.error('Failed to get installation token. Status:', response.status, 'Body:', errorText);
+        // Log safely without exposing token details
+        console.error('Failed to get installation token. Status:', response.status);
+        if (IS_DEV) {
+            console.debug('Error details:', sanitizeErrorMessage(errorText));
+        }
 
         let errorMessage = errorText;
         try {
@@ -150,17 +190,33 @@ export async function getInstallationToken(deviceToken: string): Promise<{ acces
             errorMessage = errorText || response.statusText;
         }
 
-        throw new Error(`Failed to get installation token: ${errorMessage}`);
+        throw new Error(`Failed to get installation token: ${sanitizeErrorMessage(errorMessage)}`);
     }
 
-    const data: TokenResponse = await response.json();
+    const data = await response.json();
+
+    // Validate response structure
+    if (!data.accessToken || typeof data.accessToken !== 'string') {
+        throw new Error('Invalid token response from server');
+    }
+
+    // Handle both field names: API returns 'expiresAt', interface expects 'validUntil'
+    const validUntil = data.validUntil || data.expiresAt;
+    if (!validUntil || typeof validUntil !== 'string') {
+        throw new Error('Invalid token expiry in response');
+    }
+
+    // Validate token format (basic sanity check)
+    if (data.accessToken.length < 20) {
+        throw new Error('Received malformed access token');
+    }
 
     // Handle opportunistic token rotation
     const newDeviceToken = response.headers.get('X-New-Device-Token');
 
     return {
         accessToken: data.accessToken,
-        validUntil: data.validUntil,
+        validUntil: validUntil,
         newDeviceToken: newDeviceToken || undefined,
     };
 }
@@ -257,11 +313,21 @@ export async function getUserProfile(accessToken: string, fallbackLogin?: string
     return cachedUserProfile!;
 }
 
+// --- User Profile: Clear Cache ---
+
+export function clearCachedUserProfile(): void {
+    cachedUserProfile = null;
+}
+
 
 // --- Repos: List Accessible Repositories ---
 
 export async function listRepositories(accessToken: string): Promise<Repository[]> {
-    const response = await fetch('https://api.github.com/installation/repositories', {
+    if (!accessToken || typeof accessToken !== 'string') {
+        throw new ValidationError('accessToken', 'Access token is required');
+    }
+
+    const response = await fetchWithTimeout('https://api.github.com/installation/repositories', {
         headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Accept': 'application/vnd.github+json',
@@ -270,7 +336,7 @@ export async function listRepositories(accessToken: string): Promise<Repository[
     });
 
     if (!response.ok) {
-        throw new Error(`Failed to list repositories: ${response.statusText}`);
+        throw new ApiError(response.status, response.statusText, 'Failed to list repositories');
     }
 
     const data = await response.json();
@@ -279,21 +345,34 @@ export async function listRepositories(accessToken: string): Promise<Repository[
 
 // --- Git: Get Repository Tree (Recursive) ---
 
-export async function getRepoTree(accessToken: string, owner: string, repo: string, branch: string): Promise<TreeItem[]> {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`, {
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Accept': 'application/vnd.github+json',
-            'X-GitHub-Api-Version': '2022-11-28',
-        },
-    });
+export async function getRepoTree(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    branch: string
+): Promise<TreeItem[]> {
+    // Validate all parameters
+    const validation = validateGitHubParams({ owner, repo, branch });
+    if (!validation.valid) {
+        throw new ValidationError('params', validation.errors.join('; '));
+    }
+
+    const response = await fetchWithTimeout(
+        `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
+        {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28',
+            },
+        }
+    );
 
     if (!response.ok) {
         if (response.status === 404 || response.status === 409) {
-            // Branch or repo doesn't exist (404), or repo is empty (409)
             return [];
         }
-        throw new Error(`Failed to get repo tree: ${response.statusText}`);
+        throw new ApiError(response.status, response.statusText, 'Failed to get repository tree');
     }
 
     const data = await response.json();
@@ -302,17 +381,31 @@ export async function getRepoTree(accessToken: string, owner: string, repo: stri
 
 // --- Git: Get File Content by SHA ---
 
-export async function getFileContent(accessToken: string, owner: string, repo: string, sha: string): Promise<string> {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs/${sha}`, {
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Accept': 'application/vnd.github.raw+json', // Get raw content
-            'X-GitHub-Api-Version': '2022-11-28',
-        },
-    });
+export async function getFileContent(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    sha: string
+): Promise<string> {
+    // Validate parameters
+    const validation = validateGitHubParams({ owner, repo, sha });
+    if (!validation.valid) {
+        throw new ValidationError('params', validation.errors.join('; '));
+    }
+
+    const response = await fetchWithTimeout(
+        `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/blobs/${encodeURIComponent(sha)}`,
+        {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/vnd.github.raw+json',
+                'X-GitHub-Api-Version': '2022-11-28',
+            },
+        }
+    );
 
     if (!response.ok) {
-        throw new Error(`Failed to get file content: ${response.statusText}`);
+        throw new ApiError(response.status, response.statusText, 'Failed to get file content');
     }
 
     return await response.text();
@@ -323,22 +416,25 @@ export async function getFileContent(accessToken: string, owner: string, repo: s
 async function createBlob(accessToken: string, owner: string, repo: string, content: string): Promise<string> {
     // Content here is plain text; GitHub expects UTF-8 string or Base64.
     // We'll trust GitHub to handle the JSON encoding for 'utf-8'.
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Accept': 'application/vnd.github+json',
-            'X-GitHub-Api-Version': '2022-11-28',
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            content: content,
-            encoding: 'utf-8',
-        }),
-    });
+    const response = await fetchWithTimeout(
+        `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/blobs`,
+        {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                content: content,
+                encoding: 'utf-8',
+            }),
+        }
+    );
 
     if (!response.ok) {
-        throw new Error(`Failed to create blob: ${response.statusText}`);
+        throw new ApiError(response.status, response.statusText, 'Failed to create blob');
     }
 
     const data = await response.json();
@@ -347,34 +443,41 @@ async function createBlob(accessToken: string, owner: string, repo: string, cont
 
 // Helper to get HEAD SHA for branch
 async function getRef(accessToken: string, owner: string, repo: string, branch: string): Promise<{ sha: string; url: string }> {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${branch}`, {
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Accept': 'application/vnd.github+json',
-        },
-    });
+    const response = await fetchWithTimeout(
+        `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/ref/heads/${encodeURIComponent(branch)}`,
+        {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/vnd.github+json',
+            },
+        }
+    );
     if (!response.ok) {
-        throw new Error(`Failed to get ref heads/${branch}: ${response.statusText}`);
+        throw new ApiError(response.status, response.statusText, `Failed to get ref heads/${branch}`);
     }
     const data = await response.json();
     return { sha: data.object.sha, url: data.object.url };
 }
 
 async function createTree(accessToken: string, owner: string, repo: string, baseTreeSha: string, treeItems: any[]): Promise<string> {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            base_tree: baseTreeSha,
-            tree: treeItems,
-        }),
-    });
+    const response = await fetchWithTimeout(
+        `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees`,
+        {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/vnd.github+json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                base_tree: baseTreeSha,
+                tree: treeItems,
+            }),
+        }
+    );
 
     if (!response.ok) {
-        throw new Error(`Failed to create tree: ${response.statusText}`);
+        throw new ApiError(response.status, response.statusText, 'Failed to create tree');
     }
     const data = await response.json();
     return data.sha;
@@ -389,42 +492,50 @@ async function createCommit(
     parents: string[],
     author: { name: string; email: string; date?: string }
 ): Promise<string> {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            message,
-            tree: treeSha,
-            parents,
-            author, // Inject author here
-        }),
-    });
+    const response = await fetchWithTimeout(
+        `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/commits`,
+        {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/vnd.github+json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message,
+                tree: treeSha,
+                parents,
+                author, // Inject author here
+            }),
+        }
+    );
 
     if (!response.ok) {
-        throw new Error(`Failed to create commit: ${response.statusText}`);
+        throw new ApiError(response.status, response.statusText, 'Failed to create commit');
     }
     const data = await response.json();
     return data.sha;
 }
 
 async function updateRef(accessToken: string, owner: string, repo: string, branch: string, sha: string): Promise<void> {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
-        method: 'PATCH',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            sha,
-            force: false,
-        }),
-    });
+    const response = await fetchWithTimeout(
+        `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/refs/heads/${encodeURIComponent(branch)}`,
+        {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/vnd.github+json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                sha,
+                force: false,
+            }),
+        }
+    );
 
     if (!response.ok) {
-        throw new Error(`Failed to update ref heads/${branch}: ${response.statusText}`);
+        throw new ApiError(response.status, response.statusText, `Failed to update ref heads/${branch}`);
     }
 }
 
@@ -440,6 +551,12 @@ export async function pushChanges(
     diffs: FileDiff[],
     selectedPaths: string[]
 ): Promise<CommitResult> {
+    // Add validation at the start
+    const validation = validateGitHubParams({ owner, repo, branch });
+    if (!validation.valid) {
+        throw new ValidationError('params', validation.errors.join('; '));
+    }
+
     if (commitInFlight) {
         throw new Error('A commit is already in progress. Please wait.');
     }
@@ -517,10 +634,16 @@ export async function pushChanges(
 
         return {
             commitSha,
-            htmlUrl: `https://github.com/${owner}/${repo}/commit/${commitSha}`,
+            htmlUrl: `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commit/${commitSha}`,
         };
 
+    } catch (error) {
+        // Sanitize error before re-throwing
+        const userMessage = createUserFriendlyError(error, 'Commit failed');
+        console.error('[GitHubService] Push failed:', sanitizeErrorMessage(error));
+        throw new Error(userMessage);
     } finally {
         commitInFlight = false;
     }
 }
+

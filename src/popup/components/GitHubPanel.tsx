@@ -4,17 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import RepoPicker from './RepoPicker';
 import DiffViewer from './DiffViewer';
 import CommitMessageEditor from './CommitMessageEditor';
-import {
-    type FileDiff,
-    getRepoTree,
-    pushChanges,
-    getFileContent,
-} from '../services/githubService';
+import { type FileDiff, getRepoTree, pushChanges, getFileContent } from '../services/githubService';
 import { getDeepestSharedScope } from '../utils/scopeCalculator';
 import { buildVirtualStoryTree } from '../../diff/adapter';
 import { diffTrees } from '../../diff/diff';
 import type { RepoTree } from '../../diff/types';
 import type { ParsedStoryContent } from '../utils/sacParser';
+import { getContent, updateContent, extractStoryContent } from '../../sac/sacApi';
+import { parseGitHubScriptPath, patchStoryContentWithGitHubFile } from '../../sac/revertPatch';
 
 interface GitHubPanelProps {
     parsedContent: ParsedStoryContent | null;
@@ -39,6 +36,8 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent: initialContent
     const [pushStatus, setPushStatus] = useState<{ success: number; failed: number } | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [hasCheckedDiff, setHasCheckedDiff] = useState(false);
+    const [revertLoading, setRevertLoading] = useState(false);
+    const [revertSuccess, setRevertSuccess] = useState<string | null>(null);
 
     const suggestedScope = useMemo(() => {
         return getDeepestSharedScope(selectedPaths);
@@ -50,6 +49,7 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent: initialContent
         setHasCheckedDiff(false);
         setError(null);
         setPushStatus(null);
+        setRevertSuccess(null);
     }, [selectedRepo?.id]);
 
 
@@ -200,6 +200,111 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent: initialContent
         }
     }, [selectedRepo, diffs, selectedPaths, commitMessage, isCommitValid, branch, getAccessToken, handleFetchDiff, initialContent]);
 
+
+    const handleRevert = useCallback(async () => {
+        if (selectedPaths.length === 0) return;
+
+        // Confirmation
+        if (!window.confirm(t('github.warnings.revertConfirm', { path: `${selectedPaths.length} file(s)` }))) {
+            return;
+        }
+
+        setRevertLoading(true);
+        setError(null);
+        setRevertSuccess(null);
+
+        try {
+            // 1. Fetch current story content from SAC
+            const storyId = initialContent?.id;
+            if (!storyId) throw new Error("Missing Story ID");
+
+            const { resource } = await getContent(storyId);
+
+            // 2. Extract the content object - handles both optimized and legacy structures
+            const baseContent = extractStoryContent(resource.cdata);
+            if (!baseContent) {
+                console.error("[GitHubPanel] Could not extract content. cdata structure:", {
+                    keys: Object.keys(resource.cdata || {}),
+                    hasContent: !!resource.cdata?.content,
+                    hasContentOptimized: !!resource.cdata?.contentOptimized
+                });
+                throw new Error("Could not find story content in resource.cdata");
+            }
+
+            // Get version counter for optimistic locking
+            const localVer = resource.updateCounter ?? resource.cdata?.updateCounter ?? 1;
+            console.log(`[GitHubPanel] Using localVer: ${localVer}`);
+
+            // Validate structure before patching
+            if (!baseContent.version || !Array.isArray(baseContent.entities)) {
+                console.error("[GitHubPanel] Unexpected content structure:", {
+                    hasVersion: !!baseContent.version,
+                    entitiesType: typeof baseContent.entities,
+                    isArray: Array.isArray(baseContent.entities),
+                    keys: Object.keys(baseContent)
+                });
+                throw new Error("Unexpected story content structure - missing version or entities array");
+            }
+
+            console.log(`[GitHubPanel] Fetched content with version: ${baseContent.version}, entities count: ${baseContent.entities.length}`);
+
+            // 3. Patch Loop - patch the content object iteratively
+            let patchedContent = baseContent;
+            for (const path of selectedPaths) {
+                const diff = diffs.find(d => d.path === path);
+                if (!diff) continue;
+
+                const target = parseGitHubScriptPath(path);
+                if (!target) {
+                    throw new Error(`File ${path} is not a supported script.`);
+                }
+
+                // For REVERT: use oldContent (GitHub) not newContent (SAC)
+                if (!diff.oldContent) {
+                    throw new Error(`Cannot revert ${path} - file doesn't exist in GitHub (was added locally).`);
+                }
+
+                console.log(`[GitHubPanel] Patching ${path} with GitHub content...`);
+                console.log(`[GitHubPanel] SAC content length: ${diff.newContent?.length ?? 0}, GitHub content length: ${diff.oldContent.length}`);
+
+                patchedContent = patchStoryContentWithGitHubFile({
+                    storyContent: patchedContent,
+                    githubPath: path,
+                    githubFileText: diff.oldContent  // ← Changed from diff.newContent
+                });
+            }
+
+            // 4. Update SAC with the patched content
+            console.log(`[GitHubPanel] Sending patched content to SAC...`);
+
+            await updateContent({
+                resourceId: resource.resourceId,
+                name: resource.name,
+                description: resource.description ?? "",
+                content: patchedContent,
+                localVer: localVer  // Pass the version counter
+            });
+
+            setRevertSuccess(t('github.status.reverted'));
+
+            // 5. Refresh to show updated status
+            await onFetchLatest();
+            await handleFetchDiff();
+
+        } catch (e: any) {
+            console.error("Revert failed:", e);
+            setError(e.message || "Revert failed");
+        } finally {
+            setRevertLoading(false);
+        }
+    }, [selectedPaths, diffs, initialContent, t, onFetchLatest, handleFetchDiff]);
+
+    const canRevert = useMemo(() => {
+        if (selectedPaths.length === 0) return false;
+        // All selected files must be revertible
+        return selectedPaths.every(path => !!parseGitHubScriptPath(path));
+    }, [selectedPaths]);
+
     if (status !== 'connected') {
         return null;
     }
@@ -254,9 +359,13 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent: initialContent
                     ) : null}
 
                     {error && <div className="error-message">{error}</div>}
+                    {revertSuccess && <div className="success-message">{revertSuccess}</div>}
 
                     {!diffLoading && diffs.length > 0 && (
                         <>
+                            <div className="toolbar" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+                            </div>
+
                             <DiffViewer diffs={diffs} onFileSelect={setSelectedPaths} />
 
                             <div className="commit-section">
@@ -267,17 +376,34 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent: initialContent
                                     }}
                                     suggestedScope={suggestedScope}
                                 />
+                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', justifyContent: 'flex-end', alignItems: 'center' }}>
 
-                                <button
-                                    className="primary-button push-button"
-                                    onClick={handlePush}
-                                    disabled={pushLoading || !isCommitValid || selectedPaths.length === 0}
-                                >
-                                    {pushLoading ? t('github.actions.pushing') : t('github.actions.pushFiles', { count: selectedPaths.length })}
-                                </button>
+                                    <button
+                                        className="primary-button push-button"
+                                        onClick={handlePush}
+                                        disabled={pushLoading || !isCommitValid || selectedPaths.length === 0}
+                                    >
+                                        {pushLoading ? t('github.actions.pushing') : t('github.actions.pushFiles', { count: selectedPaths.length })}
+                                    </button>
 
+                                    <button
+                                        className="secondary-button"
+                                        onClick={handleRevert}
+                                        disabled={revertLoading || diffLoading || !canRevert}
+                                        title={!canRevert ? t('github.warnings.selectScriptFilesToRevert') : ""}
+                                        style={{
+                                            borderColor: canRevert ? '#d73a49' : 'var(--border-color)',
+                                            color: canRevert ? '#d73a49' : 'var(--text-muted)',
+                                            opacity: canRevert ? 1 : 0.6,
+                                            cursor: canRevert ? 'pointer' : 'not-allowed',
+                                            marginLeft: '0.5rem'
+                                        }}
+                                    >
+                                        {revertLoading ? t('common.loading') : t('github.actions.revert')}
+                                    </button>
+                                </div>
                                 {pushStatus && (
-                                    <div className={`push-status ${pushStatus.failed > 0 ? 'partial' : 'success'}`}>
+                                    <div className={`push-status ${pushStatus.failed > 0 ? 'partial' : 'success'}`} style={{ marginTop: '0.5rem', textAlign: 'right' }}>
                                         {t('github.status.pushResult', { success: pushStatus.success, failed: pushStatus.failed })}
                                     </div>
                                 )}

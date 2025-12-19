@@ -199,15 +199,40 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
         const { url, method = "GET", body, headers = {} } = request;
 
         const performRequest = async (csrfToken?: string) => {
-            const finalHeaders: Record<string, string> = {
-                "Accept": "application/json, text/plain, */*",
-                "X-Requested-With": "XMLHttpRequest",
-                "Content-Type": "application/json",
-                ...headers
-            };
+            // Normalize passed headers to lowercase for comparison to avoid duplicates
+            const passedHeadersLower = new Map<string, string>();
+            for (const [key, _value] of Object.entries(headers)) {
+                passedHeadersLower.set(key.toLowerCase(), key); // Store original key
+            }
 
+            const finalHeaders: Record<string, string> = {};
+
+            // Only set defaults if not already provided by caller
+            if (!passedHeadersLower.has("accept")) {
+                finalHeaders["Accept"] = "application/json, text/plain, */*";
+            }
+            if (!passedHeadersLower.has("x-requested-with")) {
+                finalHeaders["X-Requested-With"] = "XMLHttpRequest";
+            }
+            if (!passedHeadersLower.has("content-type")) {
+                finalHeaders["Content-Type"] = "application/json";
+            }
+
+            // Merge with passed headers (passed headers take precedence)
+            for (const [key, value] of Object.entries(headers)) {
+                finalHeaders[key] = value as string;
+            }
+
+            // Add CSRF token if we have one
             if (csrfToken) {
                 finalHeaders["X-CSRF-Token"] = csrfToken;
+            }
+
+            console.log(`[Background] Performing ${method} to ${url}`);
+            console.log("[Background] Final headers:", finalHeaders);
+            if (method === "POST") {
+                console.log("[Background] POST Body:", body);
+                console.log("[Background] POST Body size:", JSON.stringify(body).length);
             }
 
             const response = await fetch(url, {
@@ -228,24 +253,48 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
             try {
                 // For POST requests, try to fetch CSRF token first
                 if (method === "POST") {
-                    try {
-                        const tokenResponse = await fetch(url, {
-                            method: "HEAD", // or GET
-                            credentials: "include",
-                            headers: {
-                                "X-CSRF-Token": "Fetch",
-                                "X-Requested-With": "XMLHttpRequest"
-                            }
-                        });
+                    let token: string | null | undefined = null;
 
-                        const token = tokenResponse.headers.get("x-csrf-token");
-                        if (token) {
-                            const data = await performRequest(token);
-                            sendResponse({ ok: true, data });
-                            return;
+                    // Helper to fetch token from a specific URL
+                    const fetchToken = async (targetUrl: string) => {
+                        try {
+                            const resp = await fetch(targetUrl, {
+                                method: "GET",
+                                credentials: "include",
+                                headers: {
+                                    "X-CSRF-Token": "Fetch",
+                                    "X-Requested-With": "XMLHttpRequest",
+                                    "Accept": "application/json, text/plain, */*"
+                                }
+                            });
+                            return resp.headers.get("x-csrf-token");
+                        } catch (e) {
+                            console.warn(`[Background] CSRF fetch failed for ${targetUrl}`, e);
+                            return null;
                         }
-                    } catch (e) {
-                        console.warn("Failed to fetch CSRF token, proceeding without it", e);
+                    };
+
+                    // 1. Try fetching from the actual request URL
+                    token = await fetchToken(url);
+
+                    // 2. Fallback: Try fetching from the origin/root if the first attempt failed
+                    if (!token) {
+                        try {
+                            const origin = new URL(url).origin;
+                            console.log(`[Background] CSRF fetch failed for URL, retrying with origin: ${origin}`);
+                            token = await fetchToken(origin + "/");
+                        } catch (e) {
+                            console.error("[Background] Could not determine origin for CSRF fallback", e);
+                        }
+                    }
+
+                    if (token) {
+                        console.log("[Background] Using CSRF token:", token.substring(0, 20) + "...");
+                        const data = await performRequest(token);
+                        sendResponse({ ok: true, data });
+                        return;
+                    } else {
+                        console.warn("[Background] Failed to obtain CSRF token. Proceeding without it.");
                     }
                 }
 
@@ -254,6 +303,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
                 sendResponse({ ok: true, data });
 
             } catch (e: any) {
+                console.error("[Background] Request failed:", e);
                 sendResponse({ ok: false, error: e.toString() });
             }
         })();

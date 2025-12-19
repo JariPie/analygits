@@ -1,3 +1,6 @@
+import type { SacStoryContent } from '../../types/sac';
+
+// Re-export for backward compatibility
 export interface SacStoryResponse {
     resource: {
         resourceId: string;
@@ -6,7 +9,6 @@ export interface SacStoryResponse {
         cdata: {
             content: string; // The stringified JSON
         };
-        // Add other fields if needed
     };
 }
 
@@ -20,7 +22,7 @@ export interface ScriptVariable {
 
 export interface ScriptObjectFunction {
     name: string;
-    arguments: any[];
+    arguments: unknown[];
     body: string;
 }
 
@@ -40,7 +42,7 @@ export interface WidgetEvent {
 export interface ParsedStoryContent {
     name: string;
     description: string;
-    content: any; // The parsed content
+    content: SacStoryContent | Record<string, unknown>; // The parsed content
     pages: { id: string; title: string }[];
     globalVars: ScriptVariable[];
     scriptObjects: ScriptObject[];
@@ -62,6 +64,8 @@ export function extractStoryDetails(innerContent: any): {
     // Helper to find name for an ID
     let nameMap: Record<string, string> = {};
 
+    // Note: entities handling uses `any` due to SAC's highly dynamic structure
+    // that varies between story versions - full typing would require major refactoring
     let entities: any = null;
     if (innerContent && typeof innerContent === "object") {
         if (innerContent.entities) {
@@ -85,6 +89,7 @@ export function extractStoryDetails(innerContent: any): {
                 const dataKeys = (e && e.data) ? Object.keys(e.data) : [];
                 console.log(`[SAC Parser] Entity[${idx}]: id=${e.id}, type=${e.type}. Keys: ${keys.slice(0, 5).join(',')}. DataKeys: ${dataKeys.slice(0, 5).join(',')}`);
             });
+
 
             entities.forEach((entity: any) => {
                 // Pages - this works

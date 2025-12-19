@@ -316,11 +316,11 @@ export async function updateContent(params: UpdateContentParams): Promise<any> {
 
         console.log("[sacApi] updateContent - Success");
         return json;
-    } catch (e: any) {
+    } catch (error: unknown) {
         // Log meaningful error info
-        const errorMsg = e.message || String(e);
+        const errorMsg = error instanceof Error ? error.message : String(error);
         console.error("[sacApi] updateContent failed:", errorMsg);
-        throw e;
+        throw error;
     }
 }
 
@@ -372,13 +372,13 @@ export async function testNoOpSave(storyId: string): Promise<{ success: boolean;
 
         console.log("[sacApi] testNoOpSave - SUCCESS! No-op save worked.");
         return { success: true };
-    } catch (e: any) {
-        const error = e.message || String(e);
-        console.error("[sacApi] testNoOpSave - FAILED:", error);
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error("[sacApi] testNoOpSave - FAILED:", errorMessage);
         return {
             success: false,
-            error,
-            details: e.stack
+            error: errorMessage,
+            details: error instanceof Error ? error.stack : undefined
         };
     }
 }

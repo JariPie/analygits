@@ -16,8 +16,9 @@ export function fetchMetadataXml(url: string): Promise<string> {
                 if (!res.ok) return reject(res.error);
                 resolve(res.data);
             });
-        } catch (e: any) {
-            reject(e.message || e);
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : String(error);
+            reject(message);
         }
     });
 }

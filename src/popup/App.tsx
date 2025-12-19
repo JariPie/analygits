@@ -149,9 +149,9 @@ function App() {
       setParsedContent(parsed);
       return parsed;
 
-    } catch (err: any) {
-      console.error(err);
-      let errorMessage = err.message || err.toString();
+    } catch (error: unknown) {
+      console.error(error);
+      let errorMessage = error instanceof Error ? error.message : String(error);
 
       const errorMap: Record<string, string> = {
         "SAC_SESSION_TIMEOUT": "app.errors.sacSessionTimeout",

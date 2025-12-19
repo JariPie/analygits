@@ -1,4 +1,5 @@
 import { normalizeContent } from '../diff/normalize';
+import type { SacStoryContent } from '../types/sac';
 
 // Helper to normalize path segments (same as adapter.ts)
 export function normalizePathSegment(str: string): string {
@@ -70,13 +71,16 @@ export function parseGitHubScriptPath(path: string): PatchTarget | null {
  * It does NOT prune empty arrays, empty strings, or any other fields.
  * Only the specific script text string is replaced.
  * 
- * Throws errors if ambiguity is found or target doesn't exist.
+ * @template T - The story content type, must extend SacStoryContent
+ * @param params - Object containing storyContent, githubPath, and githubFileText
+ * @returns The same story content object with the script patched in-place
+ * @throws Error if ambiguity is found or target doesn't exist
  */
-export function patchStoryContentWithGitHubFile(params: {
-    storyContent: any;
+export function patchStoryContentWithGitHubFile<T extends SacStoryContent>(params: {
+    storyContent: T;
     githubPath: string;
     githubFileText: string;
-}): any {
+}): T {
     const { storyContent, githubPath, githubFileText } = params;
     const target = parseGitHubScriptPath(githubPath);
 
@@ -95,11 +99,13 @@ export function patchStoryContentWithGitHubFile(params: {
     let appEntity: any = null;
     if (content.entities) {
         // Handle array or object map for entities
-        const keys = Object.keys(content.entities);
+        // Use any for internal access due to SAC's dynamic structure
+        const entitiesMap = content.entities as Record<string, any>;
+        const keys = Object.keys(entitiesMap);
         console.log(`[revertPatch] Searching for App Entity in ${keys.length} entities`);
 
         for (const key of keys) {
-            const ent = content.entities[key];
+            const ent = entitiesMap[key];
             // Debug log for potential candidates
             if (ent && (ent.app || String(key).includes('application'))) {
                 console.log(`[revertPatch] Checking entity ${key}:`, { id: ent.id, hasApp: !!ent.app, hasNames: !!(ent.app?.names) });
@@ -211,11 +217,15 @@ export function patchStoryContentWithGitHubFile(params: {
 /**
  * Removes/clears content from the story based on the target type.
  * Used when reverting "added" files (files that exist in SAC but not in GitHub).
+ * 
+ * @template T - The story content type, must extend SacStoryContent
+ * @param params - Object containing storyContent and githubPath
+ * @returns The same story content object with the content removed in-place
  */
-export function removeContentFromStory(params: {
-    storyContent: any;
+export function removeContentFromStory<T extends SacStoryContent>(params: {
+    storyContent: T;
     githubPath: string;
-}): any {
+}): T {
     const { storyContent, githubPath } = params;
     const target = parseGitHubScriptPath(githubPath);
 
@@ -228,9 +238,11 @@ export function removeContentFromStory(params: {
     // Find the application entity
     let appEntity: any = null;
     if (content.entities) {
-        const keys = Object.keys(content.entities);
+        // Use any for internal access due to SAC's dynamic structure
+        const entitiesMap = content.entities as Record<string, any>;
+        const keys = Object.keys(entitiesMap);
         for (const key of keys) {
-            const ent = content.entities[key];
+            const ent = entitiesMap[key];
             if (ent && ent.app && ent.app.names) {
                 appEntity = ent;
                 break;

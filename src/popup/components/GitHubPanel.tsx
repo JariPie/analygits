@@ -151,9 +151,10 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent: initialContent
             setSelectedPaths(uiDiffs.map(d => d.path));
             setHasCheckedDiff(true);
 
-        } catch (err: any) {
-            console.error(err);
-            setError(err.message || t('github.errors.diffFailed'));
+        } catch (error: unknown) {
+            console.error(error);
+            const message = error instanceof Error ? error.message : t('github.errors.diffFailed');
+            setError(message);
         } finally {
             setDiffLoading(false);
         }
@@ -191,9 +192,10 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent: initialContent
             // Refresh diffs after push
             await handleFetchDiff();
 
-        } catch (err: any) {
-            console.error('Push failed:', err);
-            setError(err.message);
+        } catch (error: unknown) {
+            console.error('Push failed:', error);
+            const message = error instanceof Error ? error.message : 'Push failed';
+            setError(message);
             setPushStatus({ success: 0, failed: selectedPaths.length });
         } finally {
             setPushLoading(false);
@@ -311,9 +313,10 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent: initialContent
             await onFetchLatest();
             await handleFetchDiff();
 
-        } catch (e: any) {
-            console.error("Revert failed:", e);
-            setError(e.message || "Revert failed");
+        } catch (error: unknown) {
+            console.error("Revert failed:", error);
+            const message = error instanceof Error ? error.message : 'Revert failed';
+            setError(message);
         } finally {
             setRevertLoading(false);
         }

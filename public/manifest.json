@@ -5,12 +5,14 @@
     "description": "Version Control for SAP Analytics Cloud",
     "permissions": [
         "storage",
-        "tabs",
-        "alarms"
+        "alarms",
+        "activeTab"
     ],
-    "host_permissions": [
-        "https://*/*",
-        "http://*/*"
+    "optional_host_permissions": [
+        "https://*.hcs.cloud.sap/*",
+        "https://*.sapanalytics.cloud/*",
+        "https://*.hanacloudservices.cloud.sap/*",
+        "https://*.sapanalyticscloud.cn/*"
     ],
     "icons": {
         "16": "icons/16x16.png",

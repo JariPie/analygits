@@ -1,5 +1,6 @@
 import { normalizeContent } from '../diff/normalize';
 import type { SacStoryContent } from '../types/sac';
+import { devLog, devError } from '../utils/errorHandler';
 
 // Helper to normalize path segments (same as adapter.ts)
 export function normalizePathSegment(str: string): string {
@@ -102,13 +103,13 @@ export function patchStoryContentWithGitHubFile<T extends SacStoryContent>(param
         // Use any for internal access due to SAC's dynamic structure
         const entitiesMap = content.entities as Record<string, any>;
         const keys = Object.keys(entitiesMap);
-        console.log(`[revertPatch] Searching for App Entity in ${keys.length} entities`);
+        devLog('revertPatch', `Searching for App Entity in ${keys.length} entities`);
 
         for (const key of keys) {
             const ent = entitiesMap[key];
             // Debug log for potential candidates
             if (ent && (ent.app || String(key).includes('application'))) {
-                console.log(`[revertPatch] Checking entity ${key}:`, { id: ent.id, hasApp: !!ent.app, hasNames: !!(ent.app?.names) });
+                devLog('revertPatch', `Checking entity ${key}:`, { id: ent.id, hasApp: !!ent.app, hasNames: !!(ent.app?.names) });
             }
 
             if (ent && ent.app && ent.app.names) {
@@ -117,7 +118,7 @@ export function patchStoryContentWithGitHubFile<T extends SacStoryContent>(param
             }
         }
     } else {
-        console.error("[revertPatch] No entities collection found in content object:", content);
+        devError('revertPatch', 'No entities collection found in content object:', content);
     }
 
     if (!appEntity) {
@@ -163,7 +164,7 @@ export function patchStoryContentWithGitHubFile<T extends SacStoryContent>(param
         // Patch
         const oldLen = appEntity.app.events[instanceId][target.eventName!].length;
         appEntity.app.events[instanceId][target.eventName!] = newScriptContent;
-        console.log(`[revertPatch] Patched ${target.eventName} on ${instanceId}. Size change: ${oldLen} -> ${newScriptContent.length}`);
+        devLog('revertPatch', `Patched ${target.eventName} on ${instanceId}. Size change: ${oldLen} -> ${newScriptContent.length}`);
         return content;
     }
 
@@ -174,7 +175,7 @@ export function patchStoryContentWithGitHubFile<T extends SacStoryContent>(param
         // "[{\"scriptObject\":\"14257215-7918-4164-a683-517468166362\"}]"
         // This matches the instanceId in appEntity.scriptObjects[].instanceId
 
-        console.log(`[revertPatch] Looking for Script Object with instanceId: ${instanceId}`);
+        devLog('revertPatch', `Looking for Script Object with instanceId: ${instanceId}`);
 
         // scriptObjects is inside the appEntity, not at content root level
         if (!appEntity.scriptObjects || !Array.isArray(appEntity.scriptObjects)) {
@@ -182,7 +183,7 @@ export function patchStoryContentWithGitHubFile<T extends SacStoryContent>(param
             throw new Error("Application entity has no scriptObjects array.");
         }
 
-        console.log(`[revertPatch] Found ${appEntity.scriptObjects.length} scriptObjects in appEntity`);
+        devLog('revertPatch', `Found ${appEntity.scriptObjects.length} scriptObjects in appEntity`);
 
         // Match by the full instanceId string (which is the JSON key in app.names)
         const scriptObj = appEntity.scriptObjects.find((so: any) => so.instanceId === instanceId);
@@ -199,7 +200,7 @@ export function patchStoryContentWithGitHubFile<T extends SacStoryContent>(param
         // Patch the function implementation
         const oldLen = scriptObj.payload.functionImplementations[target.functionName!]?.length ?? 0;
         scriptObj.payload.functionImplementations[target.functionName!] = newScriptContent;
-        console.log(`[revertPatch] Patched ${target.functionName} on ScriptObject. Size change: ${oldLen} -> ${newScriptContent.length}`);
+        devLog('revertPatch', `Patched ${target.functionName} on ScriptObject. Size change: ${oldLen} -> ${newScriptContent.length}`);
         return content;
     }
 
@@ -281,7 +282,7 @@ export function removeContentFromStory<T extends SacStoryContent>(params: {
         const instanceId = getSingleInstanceId(target.widgetFolder!, "Widget");
 
         if (appEntity.app.events?.[instanceId]?.[target.eventName!]) {
-            console.log(`[revertPatch] Removing event ${target.eventName} from ${instanceId}`);
+            devLog('revertPatch', `Removing event ${target.eventName} from ${instanceId}`);
             delete appEntity.app.events[instanceId][target.eventName!];
 
             // Clean up empty event objects
@@ -299,7 +300,7 @@ export function removeContentFromStory<T extends SacStoryContent>(params: {
         if (appEntity.scriptObjects && Array.isArray(appEntity.scriptObjects)) {
             const scriptObj = appEntity.scriptObjects.find((so: any) => so.instanceId === instanceId);
             if (scriptObj?.payload?.functionImplementations?.[target.functionName!]) {
-                console.log(`[revertPatch] Removing function ${target.functionName} from ScriptObject`);
+                devLog('revertPatch', `Removing function ${target.functionName} from ScriptObject`);
                 delete scriptObj.payload.functionImplementations[target.functionName!];
             }
         }
@@ -309,7 +310,7 @@ export function removeContentFromStory<T extends SacStoryContent>(params: {
     if (target.kind === 'globalVars') {
         // Clear all global variables
         if (appEntity.app.globalVars) {
-            console.log(`[revertPatch] Clearing all global variables`);
+            devLog('revertPatch', 'Clearing all global variables');
             appEntity.app.globalVars = {};
         }
         return content;

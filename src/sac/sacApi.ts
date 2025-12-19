@@ -1,3 +1,4 @@
+import { devLog, devError } from '../utils/errorHandler';
 
 interface GetContentData {
     resourceId: string;
@@ -79,10 +80,10 @@ export function extractStoryContent(cdata: any): any {
     const parseIfString = (value: any): any => {
         if (typeof value === 'string') {
             try {
-                console.log("[sacApi] extractStoryContent - Parsing JSON string content, length:", value.length);
+                devLog('sacApi', 'extractStoryContent - Parsing JSON string content, length:', value.length);
                 const parsed = JSON.parse(value);
-                console.log("[sacApi] extractStoryContent - Parsed content keys:", Object.keys(parsed));
-                console.log("[sacApi] extractStoryContent - Parsed content details:", {
+                devLog('sacApi', 'extractStoryContent - Parsed content keys:', Object.keys(parsed));
+                devLog('sacApi', 'extractStoryContent - Parsed content details:', {
                     version: parsed.version,
                     entitiesCount: Array.isArray(parsed.entities) ? parsed.entities.length : 'not array',
                     hasScriptObjects: !!parsed.scriptObjects,
@@ -91,7 +92,7 @@ export function extractStoryContent(cdata: any): any {
                 });
                 return parsed;
             } catch (e) {
-                console.error("[sacApi] extractStoryContent - Failed to parse string content:", e);
+                devError('sacApi', 'extractStoryContent - Failed to parse string content:', e);
                 return null;
             }
         }
@@ -102,7 +103,7 @@ export function extractStoryContent(cdata: any): any {
     if (cdata.contentOptimized) {
         const parsed = parseIfString(cdata.contentOptimized);
         if (parsed && (parsed.version || parsed.entities)) {
-            console.log("[sacApi] extractStoryContent - Found content at contentOptimized");
+            devLog('sacApi', 'extractStoryContent - Found content at contentOptimized');
             return parsed;
         }
     }
@@ -111,23 +112,23 @@ export function extractStoryContent(cdata: any): any {
     if (cdata.content) {
         const parsed = parseIfString(cdata.content);
         if (parsed && (parsed.version || parsed.entities || parsed.scriptObjects)) {
-            console.log("[sacApi] extractStoryContent - Found content at content");
+            devLog('sacApi', 'extractStoryContent - Found content at content');
             return parsed;
         }
     }
 
     // Check if cdata itself IS the content
     if (cdata.version && cdata.entities) {
-        console.log("[sacApi] extractStoryContent - cdata itself is the content");
+        devLog('sacApi', 'extractStoryContent - cdata itself is the content');
         return cdata;
     }
 
     if (Array.isArray(cdata.entities)) {
-        console.log("[sacApi] extractStoryContent - cdata has entities array directly");
+        devLog('sacApi', 'extractStoryContent - cdata has entities array directly');
         return cdata;
     }
 
-    console.warn("[sacApi] extractStoryContent - Could not find content. Keys:", Object.keys(cdata));
+    devError('sacApi', 'extractStoryContent - Could not find content. Keys:', Object.keys(cdata));
     return null;
 }
 
@@ -168,18 +169,18 @@ export async function getContent(storyId: string): Promise<GetContentResponse> {
         }
     };
 
-    console.log("[sacApi] getContent - Sending POST payload:", messagePayload.body);
+    devLog('sacApi', 'getContent - Sending POST payload:', messagePayload.body);
 
     const responseText = await sendBackgroundMessage("FETCH_DATA", messagePayload);
 
-    console.log("[sacApi] getContent - Raw responseText length:", responseText?.length);
+    devLog('sacApi', 'getContent - Raw responseText length:', responseText?.length);
 
     if (responseText === undefined || responseText === null || responseText === "undefined") {
         throw new Error(`[sacApi] Received empty/undefined response from SAC. Please check background logs.`);
     }
 
     if (typeof responseText !== 'string') {
-        console.warn("[sacApi] responseText is not a string:", typeof responseText);
+        devError('sacApi', 'responseText is not a string:', typeof responseText);
         if (typeof responseText === 'object') {
             const resp = responseText as any;
             if (resp.resourceId) return { resource: resp } as GetContentResponse;
@@ -193,7 +194,7 @@ export async function getContent(storyId: string): Promise<GetContentResponse> {
 
         // SAC returns the resource object directly for this endpoint
         if (json && json.resourceId) {
-            console.log("[sacApi] getContent - Received resource:", {
+            devLog('sacApi', 'getContent - Received resource:', {
                 resourceId: json.resourceId,
                 name: json.name,
                 hasCdata: !!json.cdata,
@@ -230,7 +231,7 @@ export async function updateContent(params: UpdateContentParams): Promise<any> {
     const contentString = JSON.stringify(content);
     const contentSize = contentString.length;
 
-    console.log("[sacApi] updateContent - Validated content structure:", {
+    devLog('sacApi', 'updateContent - Validated content structure:', {
         version: content.version,
         entitiesCount: Array.isArray(content.entities) ? content.entities.length : Object.keys(content.entities || {}).length,
         hasScriptObjects: !!content.scriptObjects,
@@ -279,10 +280,10 @@ export async function updateContent(params: UpdateContentParams): Promise<any> {
     const baseUrl = await getSacBaseUrl();
     const url = `${baseUrl}/sap/fpa/services/rest/epm/contentlib?tenant=0`;
 
-    console.log("[sacApi] updateContent - Sending to:", url);
-    console.log("[sacApi] updateContent - Payload updateOpt:", payload.data.updateOpt);
+    devLog('sacApi', 'updateContent - Sending to:', url);
+    devLog('sacApi', 'updateContent - Payload updateOpt:', payload.data.updateOpt);
 
-    console.log("[sacApi] updateContent - About to send:", {
+    devLog('sacApi', 'updateContent - About to send:', {
         url,
         method: "POST",
         hasHeaders: !!headers,
@@ -310,16 +311,16 @@ export async function updateContent(params: UpdateContentParams): Promise<any> {
 
         // Check for application-level errors
         if (json.error) {
-            console.error("[sacApi] updateContent - SAC error:", json.error);
+            devError('sacApi', 'updateContent - SAC error:', json.error);
             throw new Error(JSON.stringify(json.error));
         }
 
-        console.log("[sacApi] updateContent - Success");
+        devLog('sacApi', 'updateContent - Success');
         return json;
     } catch (error: unknown) {
         // Log meaningful error info
         const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error("[sacApi] updateContent failed:", errorMsg);
+        devError('sacApi', 'updateContent failed:', errorMsg);
         throw error;
     }
 }
@@ -330,13 +331,13 @@ export async function updateContent(params: UpdateContentParams): Promise<any> {
  * If this fails, the problem is headers/auth/CSRF/edit-mode, not patching.
  */
 export async function testNoOpSave(storyId: string): Promise<{ success: boolean; error?: string; details?: any }> {
-    console.log("[sacApi] testNoOpSave - Starting no-op save test for story:", storyId);
+    devLog('sacApi', 'testNoOpSave - Starting no-op save test for story:', storyId);
 
     try {
         // 1. Fetch current content
         const { resource } = await getContent(storyId);
 
-        console.log("[sacApi] testNoOpSave - Resource fetched:", {
+        devLog('sacApi', 'testNoOpSave - Resource fetched:', {
             resourceId: resource.resourceId,
             name: resource.name,
             updateCounter: resource.updateCounter,
@@ -352,14 +353,14 @@ export async function testNoOpSave(storyId: string): Promise<{ success: boolean;
         // Get version counter
         const localVer = resource.updateCounter ?? resource.cdata?.updateCounter ?? 1;
 
-        console.log("[sacApi] testNoOpSave - Extracted content:", {
+        devLog('sacApi', 'testNoOpSave - Extracted content:', {
             version: content.version,
             entitiesCount: Array.isArray(content.entities) ? content.entities.length : 'not array',
             localVer,
             contentSize: JSON.stringify(content).length
         });
 
-        console.log("[sacApi] testNoOpSave - Saving unchanged content...");
+        devLog('sacApi', 'testNoOpSave - Saving unchanged content...');
 
         // 3. Save it back unchanged
         await updateContent({
@@ -370,11 +371,11 @@ export async function testNoOpSave(storyId: string): Promise<{ success: boolean;
             localVer: localVer
         });
 
-        console.log("[sacApi] testNoOpSave - SUCCESS! No-op save worked.");
+        devLog('sacApi', 'testNoOpSave - SUCCESS! No-op save worked.');
         return { success: true };
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error("[sacApi] testNoOpSave - FAILED:", errorMessage);
+        devError('sacApi', 'testNoOpSave - FAILED:', errorMessage);
         return {
             success: false,
             error: errorMessage,

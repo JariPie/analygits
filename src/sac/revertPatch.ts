@@ -222,3 +222,110 @@ export function patchStoryContentWithGitHubFile(params: {
 
     return content;
 }
+
+/**
+ * Removes/clears content from the story based on the target type.
+ * Used when reverting "added" files (files that exist in SAC but not in GitHub).
+ */
+export function removeContentFromStory(params: {
+    storyContent: any;
+    githubPath: string;
+}): any {
+    const { storyContent, githubPath } = params;
+    const target = parseGitHubScriptPath(githubPath);
+
+    if (!target) {
+        throw new Error("Unsupported file path for removal.");
+    }
+
+    const content = storyContent;
+
+    // Find the application entity
+    let appEntity: any = null;
+    if (content.entities) {
+        const keys = Object.keys(content.entities);
+        for (const key of keys) {
+            const ent = content.entities[key];
+            if (ent && ent.app && ent.app.names) {
+                appEntity = ent;
+                break;
+            }
+        }
+    }
+
+    if (!appEntity) {
+        throw new Error("Could not find Application entity in story content.");
+    }
+
+    // Build name index
+    const nameIndex = new Map<string, string[]>();
+    const namesMap = appEntity.app.names || {};
+    for (const [id, humanName] of Object.entries(namesMap)) {
+        if (typeof humanName === 'string') {
+            const norm = normalizePathSegment(humanName);
+            const list = nameIndex.get(norm) || [];
+            list.push(id);
+            nameIndex.set(norm, list);
+        }
+    }
+
+    const getSingleInstanceId = (folderName: string, typeLabel: string): string => {
+        const matches = nameIndex.get(folderName);
+        if (!matches || matches.length === 0) {
+            throw new Error(`No matching ${typeLabel} found for "${folderName}" in SAC.`);
+        }
+        if (matches.length > 1) {
+            throw new Error(`Ambiguous ${typeLabel} name "${folderName}" matches multiple IDs.`);
+        }
+        return matches[0];
+    };
+
+    if (target.kind === 'widgetEvent') {
+        const instanceId = getSingleInstanceId(target.widgetFolder!, "Widget");
+
+        if (appEntity.app.events?.[instanceId]?.[target.eventName!]) {
+            console.log(`[revertPatch] Removing event ${target.eventName} from ${instanceId}`);
+            delete appEntity.app.events[instanceId][target.eventName!];
+
+            // Clean up empty event objects
+            if (Object.keys(appEntity.app.events[instanceId]).length === 0) {
+                delete appEntity.app.events[instanceId];
+            }
+        }
+        return content;
+    }
+
+    if (target.kind === 'globalFunction') {
+        const instanceId = getSingleInstanceId(target.objectFolder!, "Script Object");
+
+        let scriptObjectUuid: string | null = null;
+        const match = instanceId.match(/"scriptObject":"([^"]+)"/);
+        if (match) {
+            scriptObjectUuid = match[1];
+        }
+
+        if (!scriptObjectUuid) {
+            throw new Error(`Could not extract Script Object UUID from instance ID: ${instanceId}`);
+        }
+
+        if (content.scriptObjects && Array.isArray(content.scriptObjects)) {
+            const scriptObj = content.scriptObjects.find((so: any) => so.id === scriptObjectUuid);
+            if (scriptObj?.payload?.functionImplementations?.[target.functionName!]) {
+                console.log(`[revertPatch] Removing function ${target.functionName} from ScriptObject`);
+                delete scriptObj.payload.functionImplementations[target.functionName!];
+            }
+        }
+        return content;
+    }
+
+    if (target.kind === 'globalVars') {
+        // Clear all global variables
+        if (appEntity.app.globalVars) {
+            console.log(`[revertPatch] Clearing all global variables`);
+            appEntity.app.globalVars = {};
+        }
+        return content;
+    }
+
+    return content;
+}

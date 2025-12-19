@@ -11,7 +11,7 @@ import { diffTrees } from '../../diff/diff';
 import type { RepoTree } from '../../diff/types';
 import type { ParsedStoryContent } from '../utils/sacParser';
 import { getContent, updateContent, extractStoryContent } from '../../sac/sacApi';
-import { parseGitHubScriptPath, patchStoryContentWithGitHubFile } from '../../sac/revertPatch';
+import { parseGitHubScriptPath, patchStoryContentWithGitHubFile, removeContentFromStory } from '../../sac/revertPatch';
 
 interface GitHubPanelProps {
     parsedContent: ParsedStoryContent | null;
@@ -259,19 +259,39 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent: initialContent
                     throw new Error(`File ${path} is not a supported script.`);
                 }
 
-                // For REVERT: use oldContent (GitHub) not newContent (SAC)
-                if (!diff.oldContent) {
-                    throw new Error(`Cannot revert ${path} - file doesn't exist in GitHub (was added locally).`);
+                console.log(`[GitHubPanel] Processing ${path} with status: ${diff.status}`);
+
+                if (diff.status === 'added') {
+                    // File exists in SAC but not in GitHub - REMOVE it
+                    console.log(`[GitHubPanel] Removing ${path} (was added locally, doesn't exist in GitHub)`);
+                    patchedContent = removeContentFromStory({
+                        storyContent: patchedContent,
+                        githubPath: path
+                    });
+                } else if (diff.status === 'deleted') {
+                    // File exists in GitHub but not in SAC - RESTORE it
+                    if (!diff.oldContent) {
+                        throw new Error(`Cannot restore ${path} - missing GitHub content.`);
+                    }
+                    console.log(`[GitHubPanel] Restoring ${path} from GitHub (was deleted locally)`);
+                    patchedContent = patchStoryContentWithGitHubFile({
+                        storyContent: patchedContent,
+                        githubPath: path,
+                        githubFileText: diff.oldContent
+                    });
+                } else {
+                    // Modified - replace with GitHub version
+                    if (!diff.oldContent) {
+                        throw new Error(`Cannot revert ${path} - missing GitHub content.`);
+                    }
+                    console.log(`[GitHubPanel] Reverting ${path} to GitHub version`);
+                    console.log(`[GitHubPanel]   SAC length: ${diff.newContent?.length ?? 0}, GitHub length: ${diff.oldContent.length}`);
+                    patchedContent = patchStoryContentWithGitHubFile({
+                        storyContent: patchedContent,
+                        githubPath: path,
+                        githubFileText: diff.oldContent
+                    });
                 }
-
-                console.log(`[GitHubPanel] Patching ${path} with GitHub content...`);
-                console.log(`[GitHubPanel] SAC content length: ${diff.newContent?.length ?? 0}, GitHub content length: ${diff.oldContent.length}`);
-
-                patchedContent = patchStoryContentWithGitHubFile({
-                    storyContent: patchedContent,
-                    githubPath: path,
-                    githubFileText: diff.oldContent  // ← Changed from diff.newContent
-                });
             }
 
             // 4. Update SAC with the patched content
@@ -301,9 +321,22 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent: initialContent
 
     const canRevert = useMemo(() => {
         if (selectedPaths.length === 0) return false;
-        // All selected files must be revertible
-        return selectedPaths.every(path => !!parseGitHubScriptPath(path));
-    }, [selectedPaths]);
+
+        return selectedPaths.every(path => {
+            const target = parseGitHubScriptPath(path);
+            if (!target) return false;
+
+            const diff = diffs.find(d => d.path === path);
+            if (!diff) return false;
+
+            // Can revert: modified, added (will remove), deleted (will restore if has oldContent)
+            if (diff.status === 'added') return true;
+            if (diff.status === 'deleted') return !!diff.oldContent;
+            if (diff.status === 'modified') return !!diff.oldContent;
+
+            return false;
+        });
+    }, [selectedPaths, diffs]);
 
     if (status !== 'connected') {
         return null;

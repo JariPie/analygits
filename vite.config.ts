@@ -44,4 +44,10 @@ export default defineConfig(({ mode }) => ({
     // Expose build mode to runtime code
     '__DEV__': mode !== 'production',
   },
+  // Vitest configuration
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+  },
 }))

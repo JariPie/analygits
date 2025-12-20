@@ -208,7 +208,6 @@ export function patchStoryContentWithGitHubFile<T extends SacStoryContent>(param
         // Not MVP required, but good to have prepared structure.
         // global variables are usually in content.globalVars (array)
         // Reverting globalVars.js is trickier because it's one file mapping to many variables.
-        // We skip for now based on MVP scope.
         throw new Error("Reverting Global Variables is not supported yet.");
     }
 

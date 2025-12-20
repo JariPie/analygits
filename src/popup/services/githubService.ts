@@ -365,6 +365,7 @@ export async function getRepoTree(
                 'Accept': 'application/vnd.github+json',
                 'X-GitHub-Api-Version': '2022-11-28',
             },
+            cache: 'no-store',  // Prevent browser caching after push
         }
     );
 
@@ -401,6 +402,7 @@ export async function getFileContent(
                 'Accept': 'application/vnd.github.raw+json',
                 'X-GitHub-Api-Version': '2022-11-28',
             },
+            cache: 'no-store',  // Prevent browser caching
         }
     );
 

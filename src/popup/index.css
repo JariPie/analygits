@@ -18,12 +18,25 @@
     box-sizing: border-box;
 }
 
+/* Critical CSS: Prevent 0x0 flash on popup open */
+html,
 body {
     margin: 0;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    padding: 0;
+    min-width: 420px;
+    min-height: 200px;
     background-color: var(--background);
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     color: var(--text);
     width: 420px;
+}
+
+#root {
+    min-width: 420px;
+    min-height: 200px;
 }
 
 .app-container {

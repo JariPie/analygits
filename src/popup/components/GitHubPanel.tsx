@@ -14,6 +14,25 @@ interface GitHubPanelProps {
     onFetchLatest: () => Promise<ParsedStoryContent | null>;
 }
 
+// --- Skeleton Loader Component ---
+const SkeletonDiffLoader: React.FC = () => (
+    <div style={{ marginTop: '1rem' }}>
+        {/* Diff Items Skeleton */}
+        {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton-diff-item">
+                <div className="skeleton-badge skeleton-pulse" />
+                <div className="skeleton-text skeleton-pulse" />
+            </div>
+        ))}
+
+        {/* Commit Area Skeleton */}
+        <div className="commit-section" style={{ borderTop: 'none', paddingTop: 0 }}>
+            <div className="skeleton-editor skeleton-pulse" />
+            <div className="skeleton-button skeleton-pulse" />
+        </div>
+    </div>
+);
+
 const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent: initialContent, onFetchLatest }) => {
     const { t } = useTranslation();
     const { status, selectedRepo } = useAuth();
@@ -93,24 +112,6 @@ const GitHubPanel: React.FC<GitHubPanelProps> = ({ parsedContent: initialContent
 
     const hasDiffs = diffs.length > 0;
 
-    // --- Skeleton Loader Component ---
-    const SkeletonDiffLoader = () => (
-        <div style={{ marginTop: '1rem' }}>
-            {/* Diff Items Skeleton */}
-            {[1, 2, 3].map((i) => (
-                <div key={i} className="skeleton-diff-item">
-                    <div className="skeleton-badge skeleton-pulse" />
-                    <div className="skeleton-text skeleton-pulse" />
-                </div>
-            ))}
-
-            {/* Commit Area Skeleton */}
-            <div className="commit-section" style={{ borderTop: 'none', paddingTop: 0 }}>
-                <div className="skeleton-editor skeleton-pulse" />
-                <div className="skeleton-button skeleton-pulse" />
-            </div>
-        </div>
-    );
 
     return (
         <div className="github-panel card">

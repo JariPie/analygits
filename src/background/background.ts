@@ -1,15 +1,5 @@
 /// <reference types="chrome" />
 
-/**
- * AnalyGits Background Service Worker
- * 
- * Security hardened version with:
- * - Message sender validation (prevents cross-extension attacks)
- * - URL allowlist for SAC domains (prevents SSRF)
- * - Exponential backoff for polling
- * - Sanitized logging for production
- */
-
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
@@ -68,20 +58,20 @@ function isAllowedSacUrl(url: string): boolean {
 // ============================================================================
 
 /**
- * Validates that a message comes from our own extension's privileged contexts.
+ * Validates that a message comes from extension's privileged contexts.
  * Blocks messages from:
  * - Other extensions
  * - Content scripts (which run in web page context)
  * - Web pages
  */
 function isValidSender(sender: chrome.runtime.MessageSender): { valid: boolean; reason?: string } {
-    // Must be from our own extension
+    // Must be from extension
     if (sender.id !== chrome.runtime.id) {
         return { valid: false, reason: 'Foreign extension' };
     }
 
     // Block messages from content scripts (they have sender.tab defined)
-    // Our extension only needs popup -> background communication
+    // Extension only needs popup -> background communication
     if (sender.tab) {
         return { valid: false, reason: 'Content script context not authorized' };
     }

@@ -1,4 +1,5 @@
 import type { SacStoryContent } from '../../types/sac';
+import { devLog, devError, devWarn } from '../../utils/errorHandler';
 
 // Re-export for backward compatibility
 export interface SacStoryResponse {
@@ -50,6 +51,18 @@ export interface ParsedStoryContent {
     id: string;
 }
 
+/**
+ * Extracts structured details from SAC story content.
+ * 
+ * @param innerContent - The parsed inner content from SAC
+ * @returns Structured story details (pages, globalVars, scriptObjects, events)
+ * 
+ * TODO(type-safety): Replace `any` parameter with `SacStoryContent | Record<string, unknown>`
+ * once all SAC response variations are fully mapped. Current blockers:
+ * - SAC returns different entity structures for legacy vs modern stories
+ * - Entity arrays can contain mixed types without discriminators
+ * - Some fields appear conditionally based on story optimization level
+ */
 export function extractStoryDetails(innerContent: any): {
     pages: { id: string; title: string }[],
     globalVars: ScriptVariable[],
@@ -64,30 +77,30 @@ export function extractStoryDetails(innerContent: any): {
     // Helper to find name for an ID
     let nameMap: Record<string, string> = {};
 
-    // Note: entities handling uses `any` due to SAC's highly dynamic structure
-    // that varies between story versions - full typing would require major refactoring
-    let entities: any = null;
+    // TODO(type-safety): entities can be Array or Object map - need runtime discriminator
+    // Current approach: check Array.isArray() and handle both cases
+    let entities: any = null;  // Intentionally any - see function TODO
     if (innerContent && typeof innerContent === "object") {
         if (innerContent.entities) {
             entities = innerContent.entities;
         }
     }
 
-    console.log("[SAC Parser] Extracting details. InnerContent keys:", innerContent ? Object.keys(innerContent) : "null");
-    console.log("[SAC Parser] Entities found:", entities ? "Yes" : "No", "Type:", Array.isArray(entities) ? "Array" : typeof entities);
+    devLog('sacParser', 'Extracting details', { keys: innerContent ? Object.keys(innerContent) : 'null' });
+    devLog('sacParser', 'Entities found', { found: entities ? 'Yes' : 'No', type: Array.isArray(entities) ? 'Array' : typeof entities });
 
     if (entities) {
         let appEntity: any = null;
         let scriptObjectEntities: any[] = [];
 
         if (Array.isArray(entities)) {
-            console.log("[SAC Parser] Entities is Array. Length:", entities.length);
+            devLog('sacParser', 'Entities is Array', { length: entities.length });
 
             // LOG ALL ENTITIES TO DEBUG
-            entities.forEach((e, idx) => {
+            entities.forEach((e: any, idx: number) => {
                 const keys = e ? Object.keys(e) : [];
                 const dataKeys = (e && e.data) ? Object.keys(e.data) : [];
-                console.log(`[SAC Parser] Entity[${idx}]: id=${e.id}, type=${e.type}. Keys: ${keys.slice(0, 5).join(',')}. DataKeys: ${dataKeys.slice(0, 5).join(',')}`);
+                devLog('sacParser', `Entity[${idx}]`, { id: e.id, type: e.type, keys: keys.slice(0, 5), dataKeys: dataKeys.slice(0, 5) });
             });
 
 
@@ -117,12 +130,12 @@ export function extractStoryDetails(innerContent: any): {
                 // Heuristic 4: ID ends with :application
                 else if (entity.id && entity.id.endsWith(':application')) {
                     appEntity = entity;
-                    console.log("[SAC Parser] Found App Entity by ID suffix:", entity.id);
+                    devLog('sacParser', 'Found App Entity by ID suffix', entity.id);
                 }
                 // Heuristic 5: Has scriptObjects
                 else if (entity.scriptObjects) {
                     appEntity = entity;
-                    console.log("[SAC Parser] Found App Entity by scriptObjects property.");
+                    devLog('sacParser', 'Found App Entity by scriptObjects property');
                 }
 
                 // Script Objects (Standalone entities)
@@ -135,7 +148,7 @@ export function extractStoryDetails(innerContent: any): {
 
         } else if (typeof entities === "object") {
             const keys = Object.keys(entities);
-            console.log("[SAC Parser] Entities is Object. Keys sample:", keys.slice(0, 10).join(", "));
+            devLog('sacParser', 'Entities is Object', { keysSample: keys.slice(0, 10) });
 
             // Entities is a map
             appEntity = entities["app"];
@@ -151,14 +164,14 @@ export function extractStoryDetails(innerContent: any): {
             }
 
             if (entities.scriptObjects) {
-                console.log("[SAC Parser] Found entities.scriptObjects");
+                devLog('sacParser', 'Found entities.scriptObjects');
                 if (Array.isArray(entities.scriptObjects)) {
                     scriptObjectEntities = entities.scriptObjects;
                 } else {
                     scriptObjectEntities = Object.values(entities.scriptObjects);
                 }
             } else {
-                console.log("[SAC Parser] No entities.scriptObjects found. Checking keys...");
+                devLog('sacParser', 'No entities.scriptObjects found. Checking keys...');
                 keys.forEach(key => {
                     if (entities[key].type === "scriptObject") {
                         scriptObjectEntities.push(entities[key]);
@@ -174,14 +187,14 @@ export function extractStoryDetails(innerContent: any): {
         }
 
 
-        console.log("[SAC Parser] App Entity found:", appEntity ? "Yes" : "No");
+        devLog('sacParser', 'App Entity found', appEntity ? 'Yes' : 'No');
 
         // Drill down into 'app' property if it exists (common wrapper pattern)
         let appModel = appEntity;
         if (appEntity && appEntity.app) {
-            console.log("[SAC Parser] Found nested 'app' property in App Entity. Switching context.");
+            devLog('sacParser', 'Found nested app property in App Entity. Switching context.');
             appModel = appEntity.app;
-            console.log("[SAC Parser] Nested App Model Keys:", Object.keys(appModel));
+            devLog('sacParser', 'Nested App Model Keys', Object.keys(appModel));
         }
 
         // --- Extract Names (Move up to be available for ScriptObjects/Events) ---
@@ -192,7 +205,7 @@ export function extractStoryDetails(innerContent: any): {
         } else if (entities && entities.app && entities.app.names) {
             nameMap = entities.app.names;
         }
-        console.log("[SAC Parser] Names map size:", Object.keys(nameMap).length);
+        devLog('sacParser', 'Names map size', Object.keys(nameMap).length);
 
 
         if (appEntity) {
@@ -201,7 +214,7 @@ export function extractStoryDetails(innerContent: any): {
             const soSource = appEntity.scriptObjects ? appEntity.scriptObjects : (appModel.scriptObjects ? appModel.scriptObjects : []);
 
             if (soSource) {
-                console.log("[SAC Parser] Extracting scriptObjects. Count:", Object.keys(soSource).length);
+                devLog('sacParser', 'Extracting scriptObjects', { count: Object.keys(soSource).length });
                 let soList: any[] = [];
                 if (Array.isArray(soSource)) {
                     soList = soSource;
@@ -279,7 +292,7 @@ export function extractStoryDetails(innerContent: any): {
             rawGlobalVars = appEntity.globalVars;
         }
 
-        console.log("[SAC Parser] Raw Global Vars found:", Array.isArray(rawGlobalVars) ? rawGlobalVars.length : Object.keys(rawGlobalVars).length);
+        devLog('sacParser', 'Raw Global Vars found', Array.isArray(rawGlobalVars) ? rawGlobalVars.length : Object.keys(rawGlobalVars).length);
 
         if (Array.isArray(rawGlobalVars)) {
             rawGlobalVars.forEach((gv: any) => {
@@ -314,7 +327,7 @@ export function extractStoryDetails(innerContent: any): {
             appEvents = appEntity.events;
         }
 
-        console.log("[SAC Parser] App Model Events found:", appEvents ? "Yes" : "No");
+        devLog('sacParser', 'App Model Events found', appEvents ? 'Yes' : 'No');
 
         // Logic to process the centralized events map
         // Structure: { '[{"appPage":"GUID"}]': { "onInit": "code" } }
@@ -419,13 +432,22 @@ export function extractStoryDetails(innerContent: any): {
     return { pages, globalVars, scriptObjects, events };
 }
 
+/**
+ * Parses raw SAC API response JSON into structured content.
+ * 
+ * @param jsonString - Raw JSON string from SAC API
+ * @returns Parsed and structured story content
+ * @throws Error with specific codes: SAC_SESSION_TIMEOUT, SAC_PARSE_FAILED, SAC_EMPTY_RESPONSE
+ * 
+ * TODO(type-safety): Add overload signatures for different SAC response formats
+ */
 export function parseSacStory(jsonString: string): ParsedStoryContent {
     let data: any;
     try {
         data = JSON.parse(jsonString);
-        console.log("Parsed SAC Response:", data);
+        devLog('sacParser', 'Parsed SAC Response:', data);
     } catch (e) {
-        console.error("Raw response:", jsonString);
+        devError('sacParser', 'Raw response:', jsonString);
 
         // Check for HTML / Timeout indicators in the raw response
         const trimmed = jsonString.trim().toLowerCase();
@@ -461,7 +483,7 @@ export function parseSacStory(jsonString: string): ParsedStoryContent {
     if (!resource.cdata) {
         // More specific error context
         const errorMsg = "Invalid SAC Story structure: 'cdata' property is missing on resource object.";
-        console.error(errorMsg, "Keys found:", Object.keys(resource));
+        devError('sacParser', errorMsg, { keysFound: Object.keys(resource) });
         throw new Error(errorMsg + " Got keys: " + Object.keys(resource).join(", "));
     }
 
@@ -476,7 +498,7 @@ export function parseSacStory(jsonString: string): ParsedStoryContent {
         try {
             innerContent = JSON.parse(resource.cdata.content);
         } catch (e) {
-            console.warn("Failed to parse inner content JSON. Returning raw string.");
+            devWarn('sacParser', 'Failed to parse inner content JSON. Returning raw string.');
             innerContent = resource.cdata.content;
         }
     }

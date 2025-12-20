@@ -69,7 +69,7 @@ function debugLog(message: string, data?: unknown): void {
 
 /**
  * Chrome MV3 introduced chrome.storage.session for ephemeral storage
- * that clears when the browser closes. This is ideal for access tokens.
+ * that clears when the browser closes.
  */
 async function getSessionStorage(): Promise<{ accessToken?: string; accessTokenExpiry?: string }> {
     return new Promise((resolve) => {

@@ -1,17 +1,14 @@
 import { devLog, devError } from '../utils/errorHandler';
+import type { SacCdata, SacStoryContent } from '../types/sac';
 
 interface GetContentData {
     resourceId: string;
     resourceType: string;
     name: string;
     description: string;
-    cdata: {
-        content?: any; // Full story content object (version, entities, scriptObjects, etc.)
-        contentOptimized?: any; // Alternative location for content in unified stories
-        [key: string]: any;
-    };
+    cdata: SacCdata;
     updateCounter?: number;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export interface GetContentResponse {
@@ -22,12 +19,12 @@ export interface UpdateContentParams {
     resourceId: string;
     name: string;
     description: string;
-    content: any;
+    content: SacStoryContent;
     localVer?: number;
 }
 
 // Helper to send messages to background script
-async function sendBackgroundMessage(type: string, payload: any): Promise<any> {
+async function sendBackgroundMessage(type: string, payload: Record<string, unknown>): Promise<unknown> {
     return new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({ type, ...payload }, (response) => {
             if (chrome.runtime.lastError) {
@@ -57,31 +54,34 @@ async function getSacBaseUrl(): Promise<string> {
 /**
  * Validates that content is the story content object (resource.cdata.content),
  * not the wrapper cdata object.
+ * @throws Error if content structure is invalid
  */
-function validateContentStructure(content: any): void {
-    if (!content) {
+function validateContentStructure(content: unknown): asserts content is SacStoryContent {
+    if (!content || typeof content !== 'object') {
         throw new Error("Content is null/undefined. Expected resource.cdata.content.");
     }
-    if (!content.version) {
+    const obj = content as Record<string, unknown>;
+    if (!obj.version) {
         throw new Error(
             "Invalid content: missing 'version'. You are sending wrapper cdata; must send resource.cdata.content."
         );
     }
-    if (!Array.isArray(content.entities)) {
+    if (!Array.isArray(obj.entities)) {
         throw new Error(
             "Invalid content: 'entities' must be an array. You are sending wrapper cdata; must send resource.cdata.content."
         );
     }
 }
 
-export function extractStoryContent(cdata: any): any {
+export function extractStoryContent(cdata: SacCdata): SacStoryContent | null {
     if (!cdata) return null;
 
-    const parseIfString = (value: any): any => {
+    const parseIfString = (value: string | SacStoryContent | undefined): SacStoryContent | null => {
+        if (value === undefined) return null;
         if (typeof value === 'string') {
             try {
                 devLog('sacApi', 'extractStoryContent - Parsing JSON string content, length:', value.length);
-                const parsed = JSON.parse(value);
+                const parsed = JSON.parse(value) as SacStoryContent;
                 devLog('sacApi', 'extractStoryContent - Parsed content keys:', Object.keys(parsed));
                 devLog('sacApi', 'extractStoryContent - Parsed content details:', {
                     version: parsed.version,
@@ -117,15 +117,16 @@ export function extractStoryContent(cdata: any): any {
         }
     }
 
-    // Check if cdata itself IS the content
-    if (cdata.version && cdata.entities) {
+    // Check if cdata itself IS the content (type assertion needed as cdata could have content structure)
+    const cdataAsContent = cdata as unknown as SacStoryContent;
+    if (cdataAsContent.version && cdataAsContent.entities) {
         devLog('sacApi', 'extractStoryContent - cdata itself is the content');
-        return cdata;
+        return cdataAsContent;
     }
 
-    if (Array.isArray(cdata.entities)) {
+    if (Array.isArray(cdataAsContent.entities)) {
         devLog('sacApi', 'extractStoryContent - cdata has entities array directly');
-        return cdata;
+        return cdataAsContent;
     }
 
     devError('sacApi', 'extractStoryContent - Could not find content. Keys:', Object.keys(cdata));
@@ -173,7 +174,7 @@ export async function getContent(storyId: string): Promise<GetContentResponse> {
 
     const responseText = await sendBackgroundMessage("FETCH_DATA", messagePayload);
 
-    devLog('sacApi', 'getContent - Raw responseText length:', responseText?.length);
+    devLog('sacApi', 'getContent - Raw responseText length:', typeof responseText === 'string' ? responseText.length : 'N/A');
 
     if (responseText === undefined || responseText === null || responseText === "undefined") {
         throw new Error(`[sacApi] Received empty/undefined response from SAC. Please check background logs.`);
@@ -221,7 +222,7 @@ export async function getContent(storyId: string): Promise<GetContentResponse> {
     }
 }
 
-export async function updateContent(params: UpdateContentParams): Promise<any> {
+export async function updateContent(params: UpdateContentParams): Promise<unknown> {
     const { resourceId, name, description, content, localVer } = params;
 
     // Guardrails - ensure we're sending content, not wrapper cdata
@@ -305,6 +306,10 @@ export async function updateContent(params: UpdateContentParams): Promise<any> {
         if (typeof resText === 'string' && resText.trim().startsWith('<!')) {
             console.error("[sacApi] updateContent failed - Received HTML error page:", resText.substring(0, 500));
             throw new Error(`SAC returned HTML error page. First 500 chars: ${resText.substring(0, 500)}`);
+        }
+
+        if (typeof resText !== 'string') {
+            throw new Error(`Invalid response type from updateContent: ${typeof resText}`);
         }
 
         const json = JSON.parse(resText);

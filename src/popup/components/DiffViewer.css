@@ -1,0 +1,258 @@
+/* ============================================
+   Diff Viewer
+   ============================================ */
+.diff-viewer {
+    margin-top: 1rem;
+}
+
+.diff-filters {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    /* Center filters */
+}
+
+.diff-filter-btn {
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--muted);
+    color: var(--text-light);
+    opacity: 0.6;
+}
+
+.diff-filter-btn:hover {
+    opacity: 0.8;
+}
+
+.diff-filter-btn.active {
+    opacity: 1;
+}
+
+.diff-filter-btn.added.active {
+    background: #dcfce7;
+    color: #15803d;
+    border-color: #bbf7d0;
+}
+
+.diff-filter-btn.modified.active {
+    background: #fef9c3;
+    color: #a16207;
+    border-color: #fde047;
+}
+
+.diff-filter-btn.deleted.active {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.diff-list {
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Remove horizontal scrollbar */
+    padding: 2px;
+    /* Avoid focus outline clip */
+}
+
+/* Match accordion-item style */
+.diff-item {
+    background: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+    transition: all 0.2s;
+}
+
+.diff-item:hover {
+    border-color: var(--primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.diff-item:last-child {
+    margin-bottom: 0;
+}
+
+.diff-item-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    user-select: none;
+}
+
+.diff-item-header:hover {
+    background: var(--muted);
+
+}
+
+.diff-status-icon {
+    font-size: 0.7rem;
+    font-weight: 700;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.diff-status-icon.added {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.diff-status-icon.modified {
+    background: #fef9c3;
+    color: #a16207;
+}
+
+.diff-status-icon.deleted {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.diff-path {
+    flex: 1;
+    min-width: 0;
+    /* Critical for flex truncation */
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 0.5rem;
+}
+
+.diff-expand-btn {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+}
+
+.diff-content {
+    padding: 0;
+    background: #1e1e1e;
+    /* Keep dark mode */
+    border-top: 1px solid var(--border);
+}
+
+.diff-content pre {
+    margin: 0;
+    padding: 1rem;
+    color: #d4d4d4;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    overflow-x: auto;
+    /* Scroll ONLY the code */
+    max-height: 300px;
+}
+
+.diff-section {
+    border-bottom: 1px solid #333;
+}
+
+.diff-section:last-child {
+    border-bottom: none;
+}
+
+.diff-section-header {
+    padding: 0.5rem 1rem;
+    background: #252526;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: system-ui, -apple-system, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Code Preview Styles */
+.code-preview {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin: 0.5rem 0 0 0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Skeleton Loader */
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.skeleton-pulse {
+    animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    background-color: var(--muted);
+}
+
+.skeleton-diff-item {
+    height: 48px;
+    margin-bottom: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: white;
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+}
+
+.skeleton-badge {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    margin-right: 0.5rem;
+}
+
+.skeleton-text {
+    height: 12px;
+    width: 70%;
+    border-radius: 4px;
+}
+
+.skeleton-editor {
+    height: 120px;
+    margin-top: 1.5rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+
+.skeleton-button {
+    height: 36px;
+    margin-top: 1rem;
+    border-radius: 6px;
+    width: 100%;
+}

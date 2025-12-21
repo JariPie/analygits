@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type FileDiff } from '../services/github';
+import './DiffViewer.css';
 
 interface DiffViewerProps {
     diffs: FileDiff[];

@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { config } from '../config';
+import './StatusBadge.css';
 
 const GitHubStatusBadge: React.FC = () => {
     const { t } = useTranslation();

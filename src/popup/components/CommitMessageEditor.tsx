@@ -4,6 +4,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import { CommitEditorExtensions } from './extensions';
 import { serializeCommitMessage, validateCommitMessage } from '../utils/commitSerializer';
 import './Editor.css';
+import './CommitPanel.css';
 
 interface CommitMessageEditorProps {
     onCommitMessageChange: (message: string, isValid: boolean) => void;

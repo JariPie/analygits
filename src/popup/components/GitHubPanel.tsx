@@ -8,6 +8,7 @@ import type { ParsedStoryContent } from '../utils/sacParser';
 import { useDiffFetching } from '../hooks/useDiffFetching';
 import { useGitHubPush } from '../hooks/useGitHubPush';
 import { useGitHubRevert } from '../hooks/useGitHubRevert';
+import './GitHubPanel.css';
 
 interface GitHubPanelProps {
     parsedContent: ParsedStoryContent | null;

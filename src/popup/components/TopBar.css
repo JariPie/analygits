@@ -1,0 +1,60 @@
+/* ============================================
+   TopBar Styles
+   ============================================ */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 1rem;
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    height: var(--header-height);
+    box-sizing: border-box;
+    flex-shrink: 0;
+    /* Prevent header from shrinking */
+}
+
+.top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.top-bar-logo {
+    height: 28px;
+    width: auto;
+    object-fit: contain;
+}
+
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Adjust GitHub status badge for TopBar context */
+.top-bar .github-status-badge {
+    position: static;
+    margin-right: 0.5rem;
+}
+
+.icon-button {
+    background: transparent;
+    border: none;
+    color: var(--text-light);
+    padding: 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.icon-button:hover {
+    background: var(--background);
+    color: var(--primary);
+}

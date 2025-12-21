@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import './Button.css';
 
 interface MetadataFetcherProps {
     onFetch: (url: string, storyId?: string) => void;

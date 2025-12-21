@@ -8,6 +8,8 @@ import TopBar from './components/TopBar'
 import SettingsModal from './components/SettingsModal'
 import { useLanguagePreference } from './hooks/useLanguagePreference'
 import './index.css'
+import './components/Card.css'
+import './components/Button.css'
 
 function App() {
   const { t } = useTranslation();

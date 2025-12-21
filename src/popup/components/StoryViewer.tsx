@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ParsedStoryContent, WidgetEvent, ScriptObject, ScriptObjectFunction } from '../utils/sacParser';
+import './Accordion.css';
 
 const CodePreview = ({ code }: { code: string }) => (
     <pre className="code-preview">

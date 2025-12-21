@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useGitHubRevert } from '../../src/popup/hooks/useGitHubRevert';
-import type { FileDiff } from '../../src/popup/services/githubService';
+import type { FileDiff } from '../../src/popup/services/github';
 import type { ParsedStoryContent } from '../../src/popup/utils/sacParser';
 
 // Mock dependencies

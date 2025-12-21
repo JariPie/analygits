@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { type FileDiff, getRepoTree, getFileContent } from '../services/githubService';
+import { type FileDiff, getRepoTree, getFileContent } from '../services/github';
 import { buildVirtualStoryTree } from '../../diff/adapter';
 import { diffTrees } from '../../diff/diff';
 import type { RepoTree } from '../../diff/types';

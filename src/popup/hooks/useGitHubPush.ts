@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { type FileDiff, pushChanges } from '../services/githubService';
+import { type FileDiff, pushChanges } from '../services/github';
 
 interface UseGitHubPushParams {
     diffs: FileDiff[];

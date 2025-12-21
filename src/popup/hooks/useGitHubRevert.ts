@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type FileDiff } from '../services/githubService';
+import { type FileDiff } from '../services/github';
 import type { ParsedStoryContent } from '../utils/sacParser';
 import { getContent, updateContent, extractStoryContent } from '../../sac/sacApi';
 import { parseGitHubScriptPath, patchStoryContentWithGitHubFile, removeContentFromStory } from '../../sac/revertPatch';

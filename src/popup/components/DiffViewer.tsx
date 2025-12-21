@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type FileDiff } from '../services/githubService';
+import { type FileDiff } from '../services/github';
 
 interface DiffViewerProps {
     diffs: FileDiff[];

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { getInstallationToken, revokeDeviceToken, clearCachedUserProfile, type Repository } from '../services/githubService';
+import { getInstallationToken, revokeDeviceToken, clearCachedUserProfile, type Repository } from '../services/github';
 import { config } from '../config';
 import { isTokenExpired, isValidTokenFormat, sanitizeStorageForLogging } from './../../utils/security';
 

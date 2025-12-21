@@ -21,7 +21,7 @@ vi.mock('../../src/popup/context/AuthContext', () => ({
     })
 }));
 
-vi.mock('../../src/popup/services/githubService', () => ({
+vi.mock('../../src/popup/services/github', () => ({
     getRepoTree: vi.fn().mockResolvedValue([]),
     getFileContent: vi.fn().mockResolvedValue('content')
 }));

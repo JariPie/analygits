@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { listRepositories, type Repository } from '../services/githubService';
+import { listRepositories, type Repository } from '../services/github';
 import CustomSelect from './CustomSelect';
 
 interface RepoPickerProps {

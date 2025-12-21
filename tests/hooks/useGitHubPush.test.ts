@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useGitHubPush } from '../../src/popup/hooks/useGitHubPush';
-import type { FileDiff } from '../../src/popup/services/githubService';
+import type { FileDiff } from '../../src/popup/services/github';
 
 // Mock dependencies
 vi.mock('react-i18next', () => ({
@@ -22,7 +22,7 @@ vi.mock('../../src/popup/context/AuthContext', () => ({
 }));
 
 const mockPushChanges = vi.fn();
-vi.mock('../../src/popup/services/githubService', () => ({
+vi.mock('../../src/popup/services/github', () => ({
     pushChanges: (...args: unknown[]) => mockPushChanges(...args)
 }));
 

@@ -365,13 +365,16 @@ describe('revertPatch', () => {
                 }
             };
 
-            // This should fail because the existing event doesn't have the property to read length from
-            // The implementation tries to read oldLen before the event exists
-            expect(() => patchStoryContentWithGitHubFile({
+            // The implementation should gracefully create the widget entry and event
+            const result = patchStoryContentWithGitHubFile({
                 storyContent: content as any,
                 githubPath: 'stories/Test/scripts/widgets/Button_1/onClick.js',
                 githubFileText: 'new code'
-            })).toThrow(); // Implementation bug - it tries to read .length on undefined
+            });
+
+            // Should create the widget events entry and add the event
+            expect(result.entities['app-entity'].app.events['widget-id']).toBeDefined();
+            expect(result.entities['app-entity'].app.events['widget-id'].onClick).toContain('new code');
         });
     });
 

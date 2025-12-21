@@ -1,5 +1,10 @@
 /**
  * Fetch with configurable timeout
+ * 
+ * Note: This is intentionally separate from secureFetch in utils/security.ts.
+ * GitHub service constructs URLs internally from validated parameters, so
+ * URL allowlisting would be redundant. This keeps the GitHub module self-contained.
+ * 
  * @throws Error with 'Request timed out' message on timeout
  */
 export async function fetchWithTimeout(

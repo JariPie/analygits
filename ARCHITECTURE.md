@@ -19,7 +19,7 @@
 |-----------|----------|-------|
 | Extension Popup | **TypeScript** + **TSX** | Strict mode enabled, ES2022 target |
 | Background Worker | **TypeScript** | Compiled to ES module for Chrome MV3 |
-| Styling | **Vanilla CSS** | CSS custom properties (variables), no preprocessor |
+| Styling | **CSS Modules** | Component-scoped CSS files (e.g., `Button.css`) |
 | Build Config | **TypeScript** | Vite configuration in `vite.config.ts` |
 
 ### Frameworks & Libraries
@@ -337,8 +337,8 @@ Test files located in `/tests/`:
           │  • getContent             │   │  ┌─────────────────────┐  │
           │  • updateContent          │   │  │    Redis Database   │  │
           │                           │   │  │  (Session Store)    │  │
-          └───────────────────────────┘   │  └─────────────────────┘  │
-                                          │             │             │
+          │                           │   │  └─────────────────────┘  │
+          └───────────────────────────┘   │             │             │
                                           │             ▼             │
                                           │  ┌─────────────────────┐  │
                                           │  │    GitHub App       │  │
@@ -375,7 +375,10 @@ The user-facing interface built with **React** and **TypeScript**.
 
 #### Services:
 
-- **`githubService.ts`** - All GitHub API interactions (repositories, trees, blobs, commits)
+- **`services/github/`** - GitHub API interactions split into modules:
+    - `auth.ts`: Authentication flows
+    - `git.ts`: Tree/blob/commit operations
+    - `utils.ts`: Shared utilities
 - **`sacParser.ts`** - Parses SAC story JSON into structured TypeScript objects
 
 ---
@@ -447,54 +450,53 @@ stories/
 
 ## Backend Communication (Fastify + Redis + GitHub App)
 
-### Authentication Flow
+### Authentication Flow (Sequence Diagram)
 
-```
-┌────────────────┐     1. Click "Connect GitHub"    ┌────────────────────────┐
-│   Extension    │ ─────────────────────────────────▶ Opens GitHub App       │
-│   Popup        │                                   │ Installation Page      │
-└────────────────┘                                   └────────────────────────┘
-        │                                                      │
-        │ 2. Generate sessionId                                │
-        │    Start polling                                     │
-        ▼                                                      ▼
-┌────────────────┐     3. POST /api/handshake/poll   ┌────────────────────────┐
-│   Background   │ ─────────────────────────────────▶│   Fastify Backend      │
-│   Worker       │ ◀─────────────────────────────────│   api.analygits.com    │
-└────────────────┘     Returns: 202 (pending)        └────────────────────────┘
-        │              or 200 (ready + deviceToken)            │
-        │                                                      │
-        │                                            ┌─────────▼──────────┐
-        │                                            │   Redis Database   │
-        │                                            │   Stores:          │
-        │                                            │   • sessionId      │
-        │                                            │   • deviceToken    │
-        │                                            │   • installationId │
-        │                                            └────────────────────┘
-        │                                                      │
-        │                                                      │
-        │              4. User authorizes app                  │
-        │                                                      ▼
-        │                                            ┌────────────────────────┐
-        │                                            │   GitHub App           │
-        │                                            │   (analygitsapp)       │
-        │                                            │                        │
-        │                                            │   Sends webhook to     │
-        │                                            │   backend on install   │
-        │                                            └────────────────────────┘
-        │                                                      │
-        │              5. Backend receives install             │
-        │                 webhook, updates Redis               │
-        │                                                      ▼
-        │              6. Polling returns 200        ┌────────────────────────┐
-        │              with deviceToken              │   Backend stores       │
-        │◀────────────────────────────────────────────│   installation info    │
-        │                                            └────────────────────────┘
-        ▼
-┌────────────────┐
-│   Extension    │  7. Stores deviceToken in chrome.storage
-│   Connected!   │
-└────────────────┘
+```mermaid
+sequenceDiagram
+    participant User
+    participant Ext as Chrome Extension
+    participant Back as Backend Service
+    participant GH as GitHub
+
+    Note over Ext: 1. Init
+    Ext->>Ext: Generate CSPRNG sessionId
+    Ext->>User: Open Auth Window (github.com/apps/...?state=sessionId)
+    
+    Note over Ext: 2. Install & Handshake
+    loop Polling (Exponential Backoff)
+        Ext->>Back: POST /api/handshake/poll { sessionId }
+        Back-->>Ext: 202 Accepted { "status": "pending" }
+    end
+    
+    User->>GH: Install & Select Repos
+    GH->>Back: Callback (installation_id, setup_action, state=sessionId)
+    
+    Back->>Back: Verify state & installation_id
+    Back->>Back: Store: sessionId -> installation_id (Ready)
+    
+    Ext->>Back: POST /api/handshake/poll { sessionId }
+    
+    Back->>Back: Generate deviceToken (CSPRNG)
+    Back->>Back: Hash & Store (limit 5/inst)
+    Back->>Back: Delete sessionId
+    
+    Back-->>Ext: 200 OK { deviceToken, expiration }
+    
+    Ext->>Ext: Secure Store deviceToken
+
+    Note over Ext: 3. Operations
+    Ext->>Back: GET /api/auth/token (Header: Authorization: Bearer deviceToken)
+    Back->>Back: Verify Hash(deviceToken) (Timing-Safe)
+    Back->>GH: GET /app/installations/{id}/access_tokens
+    GH-->>Back: Access Token
+    Back-->>Ext: { accessToken, validUntil } (Header: X-New-Device-Token if rotated)
+    
+    Ext->>GH: GIT Operations (using accessToken)
+
+    Note over Ext: 4. Revocation
+    Ext->>Back: DELETE /api/auth/token
+    Back->>Back: Delete Token Mapping
 ```
 
 ### API Endpoints
@@ -616,10 +618,18 @@ sap-documentation-tool/
 │   │   └── normalize.ts      # Content normalization
 │   ├── popup/
 │   │   ├── App.tsx           # Main popup component
-│   │   ├── components/       # UI components
+│   │   ├── components/       # UI components & CSS modules
+│   │   │   ├── GitHubPanel.tsx
+│   │   │   ├── GitHubPanel.css
+│   │   │   ├── StoryViewer.tsx
+│   │   │   └── ...
 │   │   ├── context/          # React contexts (Auth)
 │   │   ├── hooks/            # Custom React hooks
-│   │   ├── services/         # API services (GitHub)
+│   │   ├── services/         # API services
+│   │   │   └── github/       # GitHub API integration modules
+│   │   │       ├── auth.ts
+│   │   │       ├── git.ts
+│   │   │       └── ...
 │   │   └── utils/            # Parsers and helpers
 │   └── sac/
 │       ├── sacApi.ts         # SAC REST API client

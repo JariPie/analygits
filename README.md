@@ -4,9 +4,9 @@
 
 AnalyGits brings modern version control to SAC story development. Track changes, view diffs, commit to GitHub, and revert when things go wrong — all from a clean Chrome extension interface.
 
-![AnalyGits Demo](<AnalyGitsMain.png>)
+![AnalyGits Demo](docs/images/AnalyGitsMain.png)
 
-![AnalyGits GitHub Diff](<AnalyGitsDiff.png>)
+![AnalyGits GitHub Diff](docs/images/AnalyGitsDiff.png)
 
 ## Why AnalyGits?
 

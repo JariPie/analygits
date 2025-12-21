@@ -229,4 +229,4 @@ When proposing significant changes, consider:
 
 ---
 
-Thank you for contributing to AnalyGits! 🎉
+Thank you for contributing to AnalyGits! 🎉 

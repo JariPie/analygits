@@ -10,26 +10,21 @@ export function diffTrees(
 ): DiffEntry[] {
     const diffs: DiffEntry[] = [];
 
-    // Union of all paths
     const allPaths = new Set([...localTree.keys(), ...repoTree.keys()]);
 
-    // Process every path
     for (const path of allPaths) {
         const local = localTree.get(path);
         const repo = repoTree.get(path);
 
-        // Case 1: Added (only in local)
         if (local && !repo) {
             diffs.push({
                 path,
                 status: "added",
                 newContent: local.content
-                // no sha for added file unless we want to indicate something else, but per spec 'added -> include newContent'
             });
             continue;
         }
 
-        // Case 2: Deleted (only in repo)
         if (!local && repo) {
             diffs.push({
                 path,
@@ -40,7 +35,6 @@ export function diffTrees(
             continue;
         }
 
-        // Case 3: Both exist - check for modification
         if (local && repo) {
             if (local.content !== repo.content) {
                 diffs.push({
@@ -51,7 +45,6 @@ export function diffTrees(
                     sha: repo.sha
                 });
             }
-            // if equal, do nothing (ignore unchanged)
         }
     }
 

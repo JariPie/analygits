@@ -23,7 +23,7 @@ export interface UpdateContentParams {
     localVer?: number;
 }
 
-// Helper to send messages to background script
+
 async function sendBackgroundMessage(type: string, payload: Record<string, unknown>): Promise<unknown> {
     return new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({ type, ...payload }, (response) => {
@@ -41,9 +41,8 @@ async function sendBackgroundMessage(type: string, payload: Record<string, unkno
     });
 }
 
-// Helper to get current SAC origin
+
 async function getSacBaseUrl(): Promise<string> {
-    // In a popup, we want the active tab of the current window (which is the SAC page)
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tabs.length || !tabs[0].url) {
         throw new Error("Could not determine active tab URL");
@@ -99,7 +98,6 @@ export function extractStoryContent(cdata: SacCdata): SacStoryContent | null {
         return value;
     };
 
-    // Check for optimized content first
     if (cdata.contentOptimized) {
         const parsed = parseIfString(cdata.contentOptimized);
         if (parsed && (parsed.version || parsed.entities)) {
@@ -108,7 +106,6 @@ export function extractStoryContent(cdata: SacCdata): SacStoryContent | null {
         }
     }
 
-    // Check for content location
     if (cdata.content) {
         const parsed = parseIfString(cdata.content);
         if (parsed && (parsed.version || parsed.entities || parsed.scriptObjects)) {
@@ -117,7 +114,6 @@ export function extractStoryContent(cdata: SacCdata): SacStoryContent | null {
         }
     }
 
-    // Check if cdata itself IS the content (type assertion needed as cdata could have content structure)
     const cdataAsContent = cdata as unknown as SacStoryContent;
     if (cdataAsContent.version && cdataAsContent.entities) {
         devLog('sacApi', 'extractStoryContent - cdata itself is the content');
@@ -193,7 +189,6 @@ export async function getContent(storyId: string): Promise<GetContentResponse> {
     try {
         const json = JSON.parse(responseText);
 
-        // SAC returns the resource object directly for this endpoint
         if (json && json.resourceId) {
             devLog('sacApi', 'getContent - Received resource:', {
                 resourceId: json.resourceId,
@@ -206,7 +201,6 @@ export async function getContent(storyId: string): Promise<GetContentResponse> {
             return { resource: json } as GetContentResponse;
         }
 
-        // Fallback: Check if it's already wrapped
         if (json && json.resource) {
             return json as GetContentResponse;
         }
@@ -225,10 +219,8 @@ export async function getContent(storyId: string): Promise<GetContentResponse> {
 export async function updateContent(params: UpdateContentParams): Promise<unknown> {
     const { resourceId, name, description, content, localVer } = params;
 
-    // Guardrails - ensure we're sending content, not wrapper cdata
     validateContentStructure(content);
 
-    // Calculate content size (SAC expects this)
     const contentString = JSON.stringify(content);
     const contentSize = contentString.length;
 
@@ -240,14 +232,13 @@ export async function updateContent(params: UpdateContentParams): Promise<unknow
         contentSize
     });
 
-    // Construct payload - cdata is the raw content object
     const payload = {
         action: "updateContent",
         data: {
             resourceId,
             name,
             description,
-            cdata: content, // This is resource.cdata.content, the raw story object
+            cdata: content,
             mobileSupport: 1,
             updateOpt: {
                 dataChangeInsightsSupport: {
@@ -260,7 +251,7 @@ export async function updateContent(params: UpdateContentParams): Promise<unknow
                 },
                 contentOnly: true,
                 ignoreVersion: false,
-                localVer: localVer ?? 1,  // Use provided version or default to 1
+                localVer: localVer ?? 1,
                 importPageDetails: [],
                 fetchImportPageDetails: true,
                 ignoreSizeLimit: true
@@ -302,7 +293,6 @@ export async function updateContent(params: UpdateContentParams): Promise<unknow
             body: payload
         });
 
-        // Check if response looks like HTML error page
         if (typeof resText === 'string' && resText.trim().startsWith('<!')) {
             console.error("[sacApi] updateContent failed - Received HTML error page:", resText.substring(0, 500));
             throw new Error(`SAC returned HTML error page. First 500 chars: ${resText.substring(0, 500)}`);
@@ -314,7 +304,6 @@ export async function updateContent(params: UpdateContentParams): Promise<unknow
 
         const json = JSON.parse(resText);
 
-        // Check for application-level errors
         if (json.error) {
             devError('sacApi', 'updateContent - SAC error:', json.error);
             throw new Error(JSON.stringify(json.error));
@@ -323,7 +312,6 @@ export async function updateContent(params: UpdateContentParams): Promise<unknow
         devLog('sacApi', 'updateContent - Success');
         return json;
     } catch (error: unknown) {
-        // Log meaningful error info
         const errorMsg = error instanceof Error ? error.message : String(error);
         devError('sacApi', 'updateContent failed:', errorMsg);
         throw error;
@@ -335,11 +323,10 @@ export async function updateContent(params: UpdateContentParams): Promise<unknow
  * Fetches content and immediately saves it unchanged.
  * If this fails, the problem is headers/auth/CSRF/edit-mode, not patching.
  */
-export async function testNoOpSave(storyId: string): Promise<{ success: boolean; error?: string; details?: any }> {
+export async function testNoOpSave(storyId: string): Promise<{ success: boolean; error?: string; details?: unknown }> {
     devLog('sacApi', 'testNoOpSave - Starting no-op save test for story:', storyId);
 
     try {
-        // 1. Fetch current content
         const { resource } = await getContent(storyId);
 
         devLog('sacApi', 'testNoOpSave - Resource fetched:', {
@@ -349,13 +336,11 @@ export async function testNoOpSave(storyId: string): Promise<{ success: boolean;
             cdataKeys: Object.keys(resource.cdata || {})
         });
 
-        // 2. Extract the content object using our helper
         const content = extractStoryContent(resource.cdata);
         if (!content) {
             throw new Error("No content found in resource.cdata (checked content, contentOptimized, and direct)");
         }
 
-        // Get version counter
         const localVer = resource.updateCounter ?? resource.cdata?.updateCounter ?? 1;
 
         devLog('sacApi', 'testNoOpSave - Extracted content:', {
@@ -365,14 +350,11 @@ export async function testNoOpSave(storyId: string): Promise<{ success: boolean;
             contentSize: JSON.stringify(content).length
         });
 
-        devLog('sacApi', 'testNoOpSave - Saving unchanged content...');
-
-        // 3. Save it back unchanged
         await updateContent({
             resourceId: resource.resourceId,
             name: resource.name,
             description: resource.description ?? "",
-            content: content, // Unchanged
+            content: content,
             localVer: localVer
         });
 

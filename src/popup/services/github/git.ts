@@ -9,12 +9,12 @@ import { fetchWithTimeout } from './utils';
 import { getUserProfile } from './auth';
 import type { Repository, TreeItem, FileDiff, CommitResult, GitTreeItem } from './types';
 
-// --- Module State ---
+
 
 let commitInFlight = false;
 let lastCommitHash: string | null = null;
 
-// --- Idempotency Hash ---
+
 
 async function computeCommitHash(message: string, diffs: FileDiff[]): Promise<string> {
     const parts: string[] = [message];
@@ -35,7 +35,7 @@ async function computeCommitHash(message: string, diffs: FileDiff[]): Promise<st
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-// --- Repository Operations ---
+
 
 export async function listRepositories(accessToken: string): Promise<Repository[]> {
     if (!accessToken || typeof accessToken !== 'string') {
@@ -58,7 +58,7 @@ export async function listRepositories(accessToken: string): Promise<Repository[
     return data.repositories as Repository[];
 }
 
-// --- Tree & Content Operations ---
+
 
 export async function getRepoTree(
     accessToken: string,
@@ -83,7 +83,6 @@ export async function getRepoTree(
     });
 
     if (!response.ok) {
-        // Empty repo or branch not found
         if (response.status === 404 || response.status === 409) {
             return [];
         }
@@ -123,7 +122,7 @@ export async function getFileContent(
     return response.text();
 }
 
-// --- Git Database API Helpers (Internal) ---
+
 
 async function createBlob(
     accessToken: string,
@@ -269,7 +268,7 @@ async function updateRef(
     }
 }
 
-// --- Main: Atomic Push ---
+
 
 export async function pushChanges(
     accessToken: string,
@@ -289,13 +288,11 @@ export async function pushChanges(
         throw new Error('A commit is already in progress. Please wait.');
     }
 
-    // Filter to selected files
     const filteredDiffs = diffs.filter((d) => selectedPaths.includes(d.path));
     if (filteredDiffs.length === 0) {
         throw new Error('No files selected to commit.');
     }
 
-    // Idempotency check
     const currentHash = await computeCommitHash(message, filteredDiffs);
     if (currentHash === lastCommitHash) {
         console.warn('Idempotency prevented duplicate commit.');
@@ -305,16 +302,13 @@ export async function pushChanges(
     commitInFlight = true;
 
     try {
-        // Fetch user profile for commit author
         const user = await getUserProfile(accessToken, owner);
         const authorEmail = user.email || `${user.id}+${user.login}@users.noreply.github.com`;
         const authorName = user.name || user.login;
 
-        // Get current HEAD
         const headRef = await getRef(accessToken, owner, repo, branch);
         const headSha = headRef.sha;
 
-        // Create blobs and prepare tree items
         const treeItems: GitTreeItem[] = [];
 
         for (const diff of filteredDiffs) {
@@ -323,7 +317,7 @@ export async function pushChanges(
                     path: diff.path,
                     mode: '100644',
                     type: 'blob',
-                    sha: null, // null signals deletion
+                    sha: null,
                 });
             } else {
                 if (!diff.newContent) {
@@ -339,20 +333,16 @@ export async function pushChanges(
             }
         }
 
-        // Create new tree
         const newTreeSha = await createTree(accessToken, owner, repo, headSha, treeItems);
 
-        // Create commit
         const commitSha = await createCommit(accessToken, owner, repo, message, newTreeSha, [headSha], {
             name: authorName,
             email: authorEmail,
             date: new Date().toISOString(),
         });
 
-        // Update branch reference
         await updateRef(accessToken, owner, repo, branch, commitSha);
 
-        // Store hash to prevent replay
         lastCommitHash = currentHash;
 
         return {
@@ -368,9 +358,8 @@ export async function pushChanges(
     }
 }
 
-// --- Testing Utilities ---
 
-/** Reset module state (for testing only) */
+
 export function _resetState(): void {
     commitInFlight = false;
     lastCommitHash = null;

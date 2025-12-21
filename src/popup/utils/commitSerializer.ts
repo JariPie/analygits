@@ -13,10 +13,8 @@ export interface CommitValidationResult {
 function getNodeText(node: JSONContent | undefined): string {
     if (!node) return '';
 
-    // Direct text property (text node)
     if (node.text) return node.text;
 
-    // Content array with nested text nodes
     if (node.content && Array.isArray(node.content)) {
         return node.content
             .map(child => child.text || getNodeText(child))
@@ -35,7 +33,6 @@ export function serializeCommitMessage(doc: JSONContent): string {
     let bodyText = '';
     let footerLines: string[] = [];
 
-    // Traverse the document blocks
     for (const node of doc.content) {
         if (node.type === 'commitHeader') {
             const typeNode = node.content?.find(n => n.type === 'commitType');
@@ -46,7 +43,6 @@ export function serializeCommitMessage(doc: JSONContent): string {
             const scopeText = getNodeText(scopeNode);
             const summaryText = getNodeText(summaryNode);
 
-            // Construct header: <type>(<scope>): <summary>
             headerLine = typeText;
             if (scopeText) {
                 headerLine += `(${scopeText})`;
@@ -57,7 +53,6 @@ export function serializeCommitMessage(doc: JSONContent): string {
                 headerLine += ': ';
             }
         } else if (node.type === 'commitBody') {
-            // Body contains paragraphs
             if (node.content) {
                 bodyText = node.content
                     .map(p => getNodeText(p))
@@ -105,7 +100,6 @@ export function validateCommitMessage(doc: JSONContent): CommitValidationResult 
         if (!summaryText) {
             errors.push('Commit summary is required');
         } else {
-            // Check header length
             const fullHeader = serializeCommitMessage({ type: 'doc', content: [header] });
             if (fullHeader.length > 50) {
                 warnings.push(`Header is ${fullHeader.length} chars (recommended: under 50)`);
@@ -120,7 +114,7 @@ export function validateCommitMessage(doc: JSONContent): CommitValidationResult 
         }
     }
 
-    // Body validation
+
     const body = doc.content.find(n => n.type === 'commitBody');
     if (body && body.content) {
         body.content.forEach((p, i) => {

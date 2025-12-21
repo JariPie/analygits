@@ -8,10 +8,6 @@
  * - Token validation utilities
  */
 
-// ============================================================================
-// INPUT VALIDATION
-// ============================================================================
-
 /**
  * Valid GitHub username/org pattern
  * Rules: 1-39 chars, alphanumeric + hyphens, no consecutive hyphens, 
@@ -44,9 +40,7 @@ export interface ValidationResult {
     sanitized?: string;
 }
 
-/**
- * Validates and sanitizes a GitHub owner (username or org)
- */
+
 export function validateGitHubOwner(owner: string): ValidationResult {
     if (!owner || typeof owner !== 'string') {
         return { valid: false, error: 'Owner is required' };
@@ -72,9 +66,7 @@ export function validateGitHubOwner(owner: string): ValidationResult {
     return { valid: true, sanitized: trimmed };
 }
 
-/**
- * Validates and sanitizes a GitHub repository name
- */
+
 export function validateGitHubRepo(repo: string): ValidationResult {
     if (!repo || typeof repo !== 'string') {
         return { valid: false, error: 'Repository name is required' };
@@ -106,9 +98,7 @@ export function validateGitHubRepo(repo: string): ValidationResult {
     return { valid: true, sanitized: trimmed };
 }
 
-/**
- * Validates and sanitizes a Git branch name
- */
+
 export function validateGitBranch(branch: string): ValidationResult {
     if (!branch || typeof branch !== 'string') {
         return { valid: false, error: 'Branch name is required' };
@@ -139,9 +129,7 @@ export function validateGitBranch(branch: string): ValidationResult {
     return { valid: true, sanitized: trimmed };
 }
 
-/**
- * Validates a Git SHA
- */
+
 export function validateGitSha(sha: string): ValidationResult {
     if (!sha || typeof sha !== 'string') {
         return { valid: false, error: 'SHA is required' };
@@ -156,9 +144,7 @@ export function validateGitSha(sha: string): ValidationResult {
     return { valid: true, sanitized: trimmed };
 }
 
-/**
- * Validates GitHub API parameters before making requests
- */
+
 export function validateGitHubParams(params: {
     owner?: string;
     repo?: string;
@@ -198,10 +184,6 @@ export function validateGitHubParams(params: {
     return { valid: errors.length === 0, errors };
 }
 
-// ============================================================================
-// ERROR HANDLING
-// ============================================================================
-
 /**
  * Patterns that indicate sensitive information in error messages
  */
@@ -215,9 +197,7 @@ const SENSITIVE_PATTERNS = [
     /password[=:]\s*['"]?[^\s'"]+/gi,    // Passwords
 ];
 
-/**
- * Sanitizes an error message by removing potentially sensitive information
- */
+
 export function sanitizeErrorMessage(error: unknown): string {
     let message: string;
 
@@ -243,9 +223,7 @@ export function sanitizeErrorMessage(error: unknown): string {
     return sanitized;
 }
 
-/**
- * Creates a user-friendly error message from various error types
- */
+
 export function createUserFriendlyError(error: unknown, context?: string): string {
     const sanitized = sanitizeErrorMessage(error);
 
@@ -275,9 +253,7 @@ export function createUserFriendlyError(error: unknown, context?: string): strin
     return sanitized;
 }
 
-/**
- * Error class for validation failures
- */
+
 export class ValidationError extends Error {
     public readonly field: string;
     public readonly code: string;
@@ -290,9 +266,7 @@ export class ValidationError extends Error {
     }
 }
 
-/**
- * Error class for API failures with sanitized messages
- */
+
 export class ApiError extends Error {
     public readonly status: number;
     public readonly userMessage: string;
@@ -305,32 +279,24 @@ export class ApiError extends Error {
     }
 }
 
-// ============================================================================
-// SECURE FETCH
-// ============================================================================
+
 
 export interface SecureFetchOptions extends RequestInit {
     timeout?: number;
     validateUrl?: boolean;
 }
 
-/**
- * Allowed GitHub API domains
- */
+
 const ALLOWED_GITHUB_DOMAINS = [
     'api.github.com',
 ];
 
-/**
- * Allowed backend domains
- */
+
 const ALLOWED_BACKEND_DOMAINS = [
     'api.analygits.com',
 ];
 
-/**
- * Validates a URL is in the allowlist for GitHub API calls
- */
+
 export function isAllowedGitHubUrl(url: string): boolean {
     try {
         const parsed = new URL(url);
@@ -341,9 +307,7 @@ export function isAllowedGitHubUrl(url: string): boolean {
     }
 }
 
-/**
- * Validates a URL is in the allowlist for backend API calls
- */
+
 export function isAllowedBackendUrl(url: string): boolean {
     try {
         const parsed = new URL(url);
@@ -354,9 +318,7 @@ export function isAllowedBackendUrl(url: string): boolean {
     }
 }
 
-/**
- * Fetch wrapper with timeout and security checks
- */
+
 export async function secureFetch(
     url: string,
     options: SecureFetchOptions = {}
@@ -391,10 +353,6 @@ export async function secureFetch(
     }
 }
 
-// ============================================================================
-// TOKEN UTILITIES
-// ============================================================================
-
 /**
  * Checks if a token appears to be expired based on its expiry time
  */
@@ -407,9 +365,7 @@ export function isTokenExpired(expiryTime: string | number | null | undefined, b
     return expiry - now < bufferMs;
 }
 
-/**
- * Validates token format (basic sanity check)
- */
+
 export function isValidTokenFormat(token: string | null | undefined): boolean {
     if (!token || typeof token !== 'string') return false;
 
@@ -422,27 +378,19 @@ export function isValidTokenFormat(token: string | null | undefined): boolean {
     return true;
 }
 
-/**
- * Masks a token for safe logging
- */
+
 export function maskToken(token: string | null | undefined): string {
     if (!token) return '(none)';
     if (token.length <= 8) return '***';
     return `${token.substring(0, 4)}...${token.substring(token.length - 4)}`;
 }
 
-// ============================================================================
-// STORAGE SECURITY
-// ============================================================================
-
 /**
  * Keys that should never be logged or exposed
  */
 const SENSITIVE_STORAGE_KEYS = ['deviceToken', 'accessToken', 'token', 'secret'];
 
-/**
- * Sanitizes storage data for logging
- */
+
 export function sanitizeStorageForLogging(data: Record<string, unknown>): Record<string, unknown> {
     const sanitized: Record<string, unknown> = {};
 

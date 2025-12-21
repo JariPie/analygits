@@ -2,9 +2,7 @@ import { Document, Packer, Paragraph, TextRun } from "docx";
 import { saveAs } from "file-saver";
 
 export async function exportDoc(metadataXml: string, editorContent: string) {
-    // Simple clean up of HTML tags for the prototype. 
-    // For a real app, we'd traverse the Tiptap JSON or use an HTML-to-Docx converter.
-    // Here we just dump the text.
+
 
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = editorContent;

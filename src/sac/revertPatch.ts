@@ -2,8 +2,6 @@ import { normalizeContent } from '../diff/normalize';
 import type { SacStoryContent } from '../types/sac';
 import { devLog, devError } from '../utils/errorHandler';
 
-// --- Types ---
-
 export type PatchKind = 'widgetEvent' | 'globalFunction' | 'globalVars';
 
 export interface PatchTarget {
@@ -19,9 +17,9 @@ interface AppEntityContext {
     nameIndex: Map<string, string[]>;
 }
 
-// --- Path Utilities ---
 
-/** Normalize path segments for consistent folder names */
+
+
 export function normalizePathSegment(str: string): string {
     return str.replace(/[\s\/]+/g, '_');
 }
@@ -67,7 +65,7 @@ export function parseGitHubScriptPath(path: string): PatchTarget | null {
     return null;
 }
 
-// --- Internal Helpers ---
+
 
 function findAppEntity(content: SacStoryContent): any {
     if (!content.entities) {
@@ -149,7 +147,7 @@ function findScriptObject(appEntity: any, instanceId: string): any {
     return scriptObj;
 }
 
-// --- Public API ---
+
 
 /**
  * Patches the story content object with the new script logic.

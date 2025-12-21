@@ -9,17 +9,17 @@ import type { HandshakePollResponse, GitHubUser } from './types';
 // Development mode flag for verbose logging
 const IS_DEV = import.meta.env?.DEV ?? false;
 
-// --- Module State ---
+
 
 let cachedUserProfile: GitHubUser | null = null;
 
-// --- Install URL ---
+
 
 export function getInstallUrl(sessionId: string): string {
     return `https://github.com/apps/${config.GITHUB_APP_SLUG}/installations/new?state=${sessionId}`;
 }
 
-// --- Handshake Polling ---
+
 
 export async function pollHandshake(sessionId: string): Promise<HandshakePollResponse> {
     const response = await fetch(`${config.BACKEND_BASE_URL}/api/handshake/poll`, {
@@ -46,7 +46,7 @@ export async function pollHandshake(sessionId: string): Promise<HandshakePollRes
     };
 }
 
-// --- Token Exchange ---
+
 
 export async function getInstallationToken(
     deviceToken: string
@@ -91,18 +91,15 @@ export async function getInstallationToken(
         throw new Error('Invalid token response from server');
     }
 
-    // Handle both field names: API returns 'expiresAt', interface expects 'validUntil'
     const validUntil = data.validUntil || data.expiresAt;
     if (!validUntil || typeof validUntil !== 'string') {
         throw new Error('Invalid token expiry in response');
     }
 
-    // Validate token format (basic sanity check)
     if (data.accessToken.length < 20) {
         throw new Error('Received malformed access token');
     }
 
-    // Handle opportunistic token rotation
     const newDeviceToken = response.headers.get('X-New-Device-Token');
 
     return {
@@ -112,7 +109,7 @@ export async function getInstallationToken(
     };
 }
 
-// --- Token Revocation ---
+
 
 export async function revokeDeviceToken(deviceToken: string): Promise<void> {
     const response = await fetch(`${config.BACKEND_BASE_URL}/api/auth/token`, {
@@ -127,7 +124,7 @@ export async function revokeDeviceToken(deviceToken: string): Promise<void> {
     }
 }
 
-// --- User Profile ---
+
 
 export async function getUserProfile(
     accessToken: string,
@@ -169,7 +166,6 @@ export async function getUserProfile(
             console.warn(
                 'Access to /user forbidden (likely installation token). Using repo owner as fallback.'
             );
-            // Try to get public profile of the repo owner
             const publicResp = await fetch(`https://api.github.com/users/${fallbackLogin}`, {
                 headers: {
                     Accept: 'application/vnd.github+json',
@@ -184,7 +180,7 @@ export async function getUserProfile(
                         id: data.id,
                         login: data.login,
                         name: data.name,
-                        email: data.email, // Often null in public profile
+                        email: data.email,
                     };
                     return cachedUserProfile;
                 }
@@ -194,7 +190,6 @@ export async function getUserProfile(
         console.warn('Failed to fetch user profile, using placeholder.', e);
     }
 
-    // Fallback placeholder if we can't identify the user
     console.warn('Using placeholder identity for commit author.');
     cachedUserProfile = {
         id: 0,

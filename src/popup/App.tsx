@@ -12,7 +12,6 @@ import './index.css'
 function App() {
   const { t } = useTranslation();
 
-  // Initialize language preference
   const { language, setLanguage, isLoaded: isLanguageLoaded } = useLanguagePreference();
 
   const [loading, setLoading] = useState(false)
@@ -22,13 +21,10 @@ function App() {
   const [storyId, setStoryId] = useState('');
   const [storyName, setStoryName] = useState('');
 
-  // UI State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // State to control visibility of heavy content
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
 
-  // Load state from storage on mount
   useEffect(() => {
     chrome.storage.local.get(['lastUrl', 'lastStoryId', 'lastStoryName'], (result) => {
       if (result.lastUrl) setUrl(result.lastUrl as string);
@@ -38,14 +34,12 @@ function App() {
     });
   }, []);
 
-  // Save inputs to storage whenever they change
   useEffect(() => {
     if (isStorageLoaded) {
       chrome.storage.local.set({ lastUrl: url, lastStoryId: storyId, lastStoryName: storyName });
     }
   }, [url, storyId, storyName, isStorageLoaded]);
 
-  // Save content to storage whenever it changes
   useEffect(() => {
     if (isStorageLoaded) {
       if (parsedContent) {
@@ -55,7 +49,6 @@ function App() {
   }, [parsedContent, isStorageLoaded]);
 
 
-  // Auto-detect SAC Story from current tab
   useEffect(() => {
     if (!isStorageLoaded) return;
 
@@ -64,10 +57,8 @@ function App() {
       if (currentTab && currentTab.url) {
         const urlObj = new URL(currentTab.url);
 
-        // Check for storyId in URL parameters
         let storyIdParam = urlObj.searchParams.get("storyId");
 
-        // Check hash for modern SAC URL format
         if (!storyIdParam && urlObj.hash) {
           const hashMatch = urlObj.hash.match(/\/s2\/([A-Z0-9]+)/);
           if (hashMatch && hashMatch[1]) {
@@ -76,7 +67,6 @@ function App() {
         }
 
         if (storyIdParam) {
-          // Detect story name from tab title if available
           if (currentTab.title) {
             let cleanTitle = currentTab.title;
             cleanTitle = cleanTitle.replace(" - SAP Analytics Cloud", "");
@@ -92,7 +82,6 @@ function App() {
             return prev;
           });
 
-          // Construct the Tenant URL
           const tenantId = urlObj.searchParams.get("tenant") || "5";
           const apiBase = `${urlObj.origin}/sap/fpa/services/rest/epm/contentlib?tenant=${tenantId}`;
 
@@ -114,7 +103,14 @@ function App() {
     // setParsedContent(null)
 
     try {
-      let fetchOptions: any = { type: "FETCH_DATA", url: fetchUrl };
+      interface FetchOptions {
+        type: string;
+        url: string;
+        method?: string;
+        body?: Record<string, unknown>;
+      }
+
+      let fetchOptions: FetchOptions = { type: "FETCH_DATA", url: fetchUrl };
 
       if (fetchStoryId) {
         fetchOptions.method = "POST";
@@ -170,7 +166,6 @@ function App() {
     }
   }
 
-  // Render logic variables
   const isStoryLoaded = !!parsedContent;
   const isDifferentStory = isStoryLoaded && storyId && parsedContent?.id !== storyId;
 

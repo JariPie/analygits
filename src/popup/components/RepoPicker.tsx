@@ -30,9 +30,9 @@ const RepoPicker: React.FC<RepoPickerProps> = ({ onRepoChange, onRefresh }) => {
                 const repos = await listRepositories(token);
                 setRepositories(repos);
                 console.log('✅ RepoPicker: Repos loaded', repos.length);
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error('❌ RepoPicker: Fetch failed', err);
-                setError(err.message);
+                setError(err instanceof Error ? err.message : 'Failed to load repositories');
             } finally {
                 setLoading(false);
             }

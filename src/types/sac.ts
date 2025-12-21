@@ -6,10 +6,6 @@
  * depending on story version and optimization level.
  */
 
-// ============================================================================
-// CORE API RESPONSE TYPES
-// ============================================================================
-
 /**
  * Raw API response wrapper from SAC contentlib endpoint.
  * The actual content is nested several layers deep.
@@ -18,9 +14,7 @@ export interface SacApiResponse {
     resource: SacResource;
 }
 
-/**
- * Resource object containing story metadata and content.
- */
+
 export interface SacResource {
     resourceId: string;
     resourceType: string;
@@ -47,10 +41,6 @@ export interface SacCdata {
     [key: string]: unknown;
 }
 
-// ============================================================================
-// STORY CONTENT TYPES
-// ============================================================================
-
 /**
  * The parsed inner content of a SAC story.
  * This is what you get after parsing cdata.content or cdata.contentOptimized.
@@ -71,14 +61,10 @@ export interface SacStoryContent {
     [key: string]: unknown;
 }
 
-/**
- * Union type for various entity types within a story.
- */
+
 export type SacEntity = SacAppEntity | SacStoryEntity | SacGenericEntity;
 
-/**
- * Generic entity with common fields shared by all entity types.
- */
+
 export interface SacGenericEntity {
     id?: string;
     type?: string;
@@ -101,9 +87,7 @@ export interface SacAppEntity extends SacGenericEntity {
     names?: Record<string, string>;
 }
 
-/**
- * App configuration containing names map, events, and global vars.
- */
+
 export interface SacAppConfig {
     /** Maps instance IDs to human-readable names */
     names?: Record<string, string>;
@@ -114,9 +98,7 @@ export interface SacAppConfig {
     [key: string]: unknown;
 }
 
-/**
- * Story entity containing pages and layout info.
- */
+
 export interface SacStoryEntity extends SacGenericEntity {
     type: 'story';
     data?: {
@@ -125,9 +107,7 @@ export interface SacStoryEntity extends SacGenericEntity {
     };
 }
 
-/**
- * Page within a story.
- */
+
 export interface SacPage {
     id: string;
     title: string;
@@ -159,9 +139,7 @@ export interface SacScriptObject {
     [key: string]: unknown;
 }
 
-/**
- * Script payload with function implementations.
- */
+
 export interface SacScriptPayload {
     /** Map of function names to their implementation code */
     functionImplementations?: Record<string, string>;
@@ -170,27 +148,21 @@ export interface SacScriptPayload {
     [key: string]: unknown;
 }
 
-/**
- * Function signature definition.
- */
+
 export interface SacFunctionSignature {
     arguments?: SacFunctionArgument[];
     returnType?: string;
     [key: string]: unknown;
 }
 
-/**
- * Function argument definition.
- */
+
 export interface SacFunctionArgument {
     name: string;
     type: string;
     [key: string]: unknown;
 }
 
-/**
- * Legacy function definition structure.
- */
+
 export interface SacScriptFunction {
     name: string;
     arguments?: SacFunctionArgument[];
@@ -198,13 +170,7 @@ export interface SacScriptFunction {
     [key: string]: unknown;
 }
 
-// ============================================================================
-// GLOBAL VARIABLE TYPES
-// ============================================================================
 
-/**
- * Global variable definition.
- */
 export interface SacGlobalVar {
     id: string;
     name?: string;
@@ -214,13 +180,7 @@ export interface SacGlobalVar {
     [key: string]: unknown;
 }
 
-// ============================================================================
-// EVENT TYPES
-// ============================================================================
 
-/**
- * Widget event definition (parsed/normalized form).
- */
 export interface SacWidgetEvent {
     /** Widget instance ID (may be JSON key or GUID) */
     widgetId: string;
@@ -237,13 +197,7 @@ export interface SacWidgetEvent {
  */
 export type SacEventsMap = Record<string, Record<string, string>>;
 
-// ============================================================================
-// TYPE GUARDS
-// ============================================================================
 
-/**
- * Type guard to check if content has the expected story content structure.
- */
 export function isSacStoryContent(value: unknown): value is SacStoryContent {
     if (!value || typeof value !== 'object') return false;
     const obj = value as Record<string, unknown>;
@@ -251,18 +205,14 @@ export function isSacStoryContent(value: unknown): value is SacStoryContent {
         (Array.isArray(obj.entities) || (obj.entities !== null && typeof obj.entities === 'object'));
 }
 
-/**
- * Type guard to check if an entity is an AppEntity.
- */
+
 export function isSacAppEntity(entity: SacEntity): entity is SacAppEntity {
     return entity !== null &&
         typeof entity === 'object' &&
         ('app' in entity || 'names' in entity || 'scriptObjects' in entity);
 }
 
-/**
- * Type guard to check if an entity is a StoryEntity.
- */
+
 export function isSacStoryEntity(entity: SacEntity): entity is SacStoryEntity {
     return entity !== null &&
         typeof entity === 'object' &&
@@ -288,13 +238,7 @@ export function parseScriptObjectId(instanceId: string): string {
     return instanceId;
 }
 
-// ============================================================================
-// UPDATE CONTENT TYPES
-// ============================================================================
 
-/**
- * Parameters for updating story content via SAC API.
- */
 export interface SacUpdateContentParams {
     resourceId: string;
     name: string;

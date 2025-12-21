@@ -2,7 +2,6 @@ export function fetchMetadataXml(url: string): Promise<string> {
     return new Promise((resolve, reject) => {
         try {
             if (!chrome?.runtime?.sendMessage) {
-                // Fallback for local development without extension context
                 console.warn("Chrome runtime not found. Fetching directly (will likely fail CORS if not proxied).");
                 fetch(url).then(r => r.text()).then(resolve).catch(reject);
                 return;

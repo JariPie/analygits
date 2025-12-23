@@ -5,7 +5,6 @@
     "description": "Version Control for SAP Analytics Cloud",
     "permissions": [
         "storage",
-        "alarms",
         "activeTab"
     ],
     "optional_host_permissions": [

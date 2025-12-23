@@ -1,14 +1,15 @@
 {
   "name": "sap-documentation-tool",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "package": "npm run build && cd dist && zip -r ../analygits-v1.0.0.zip ."
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.4",

@@ -1,0 +1,146 @@
+{
+    "app": {
+        "title": "AnalyGits",
+        "subtitle": "Fetch and document SAC Stories",
+        "storyFetchedSuccess": "Story Fetched Successfully!",
+        "storyFetchedDefault": "Story Fetched",
+        "sections": {
+            "pages": "Pages ({{count}})",
+            "globalVars": "Global Variables ({{count}})",
+            "scriptObjects": "Script Objects ({{count}})",
+            "events": "Events ({{count}})"
+        },
+        "actions": {
+            "showJson": "Show Raw JSON",
+            "hideJson": "Hide Raw JSON",
+            "refresh": "Reload",
+            "newStoryDetected": "New Story Detected: {{name}}",
+            "fetchNewStory": "Fetch New Story"
+        },
+        "errors": {
+            "sacSessionTimeout": "SAC Session Timed Out. Please log in to SAP Analytics Cloud in a new tab or refresh the page and try again.",
+            "sacParseFailed": "Failed to parse initial JSON response from SAC.",
+            "sacEmptyResponse": "Invalid SAC Story response: Response is empty or null."
+        },
+        "debug": {
+            "title": "Debug Info",
+            "pages": "Pages:",
+            "globalVars": "Global Vars:",
+            "scriptObjects": "Script Objects:",
+            "events": "Events:",
+            "entityKeys": "Entity Keys:",
+            "noEntities": "No entities found",
+            "isArray": "Is Array?"
+        }
+    },
+    "github": {
+        "errors": {
+            "fetchFirst": "Please fetch a story and select a repository first.",
+            "noContent": "No content found in story to diff.",
+            "noStoryPath": "Failed to determine story path.",
+            "invalidCommit": "Please provide a valid commit message.",
+            "diffFailed": "Failed to compute diffs."
+        },
+        "actions": {
+            "fetchDiff": "Fetch & Diff",
+            "pushing": "Pushing...",
+            "pushFiles": "Push {{count}} file(s)",
+            "revert": "Revert"
+        },
+        "warnings": {
+            "revertConfirm": "Are you sure you want to revert '{{path}}' in SAC? This will overwrite the current content in SAC with the version from GitHub."
+        },
+        "status": {
+            "pushResult": "{{success}} succeeded, {{failed}} failed",
+            "upToDate": "Everything is up to date. No changes found.",
+            "reverted": "Successfully reverted in SAC."
+        }
+    },
+    "meta": {
+        "labels": {},
+        "placeholders": {
+            "url": "https://.../services/rest/epm/contentlib?",
+            "storyId": "Story ID (e.g. 83D8...)"
+        },
+        "actions": {
+            "fetch": "Fetch Story",
+            "fetchWithName": "Fetch Story {{name}}",
+            "fetching": "Fetching..."
+        }
+    },
+    "repo": {
+        "labels": {
+            "repository": "Repository",
+            "branch": "Branch"
+        },
+        "placeholders": {
+            "selectRepo": "Select a repository...",
+            "branch": "main"
+        },
+        "status": {
+            "loadingRepos": "Loading repositories..."
+        }
+    },
+    "statusBadge": {
+        "connect": "Connect",
+        "connecting": "Connecting...",
+        "connected": "Connected",
+        "tooltip": {
+            "connected": "Connected to GitHub",
+            "connect": "Click to connect GitHub"
+        }
+    },
+    "diff": {
+        "noChanges": "No changes detected.",
+        "stats": {
+            "added": "{{count}} added",
+            "modified": "{{count}} modified",
+            "deleted": "{{count}} deleted"
+        },
+        "labels": {
+            "old": "- Old",
+            "new": "+ New"
+        },
+        "contentNotLoaded": "(Content not loaded)",
+        "actions": {
+            "collapse": "Collapse",
+            "expand": "Expand"
+        }
+    },
+    "editor": {
+        "title": "Commit Message",
+        "status": {
+            "ready": "✅ Ready",
+            "incomplete": "❌ Incomplete"
+        },
+        "validation": {
+            "strictMode": "Using strict mode: "
+        },
+        "help": "Type: <code>feat(scope): summary</code> then Enter for body."
+    },
+    "common": {
+        "loading": "Loading...",
+        "error": "Error",
+        "fetch": "Fetch",
+        "refresh": "Refresh",
+        "save": "Save",
+        "cancel": "Cancel",
+        "yes": "Yes",
+        "no": "No",
+        "settings": "Settings",
+        "close": "Close"
+    },
+    "settings": {
+        "title": "Settings",
+        "language": {
+            "label": "Language",
+            "system": "System Default",
+            "en": "English",
+            "de": "Deutsch"
+        }
+    },
+    "toast": {
+        "copied": "Copied to clipboard",
+        "saved": "Settings saved"
+    }
+}

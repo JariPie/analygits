@@ -1,0 +1,39 @@
+{
+    "manifest_version": 3,
+    "name": "AnalyGits",
+    "version": "1.0.0",
+    "description": "Version Control for SAP Analytics Cloud",
+    "permissions": [
+        "storage",
+        "activeTab"
+    ],
+    "optional_host_permissions": [
+        "https://*.hcs.cloud.sap/*",
+        "https://*.sapanalytics.cloud/*",
+        "https://*.hanacloudservices.cloud.sap/*",
+        "https://*.sapanalyticscloud.cn/*"
+    ],
+    "icons": {
+        "16": "icons/16x16.png",
+        "32": "icons/32x32.png",
+        "48": "icons/48x48.png",
+        "128": "icons/128x128.png"
+    },
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    },
+    "action": {
+        "default_popup": "src/popup/index.html",
+        "default_title": "AnalyGits",
+        "default_icon": {
+            "16": "icons/16x16.png",
+            "32": "icons/32x32.png",
+            "48": "icons/48x48.png",
+            "128": "icons/128x128.png"
+        }
+    },
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'self'"
+    }
+}

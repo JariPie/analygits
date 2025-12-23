@@ -1,0 +1,68 @@
+/* Suggestion Dropdown - Light Theme */
+.suggestion-dropdown {
+    background: #ffffff;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    min-width: 240px;
+    max-width: 360px;
+    /* max-height removed, controlled by parent (floatingEl) */
+    /* Ensure it fills the parent if parent is taller/constrained */
+    height: 100%;
+    overflow-y: auto;
+    z-index: 1000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.suggestion-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    color: #24292e;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    transition: background-color 0.1s ease;
+}
+
+.suggestion-item.selected {
+    background: #f1f8ff;
+    color: #0366d6;
+}
+
+.suggestion-item:hover:not(.selected) {
+    background: #f6f8fa;
+}
+
+.suggestion-label {
+    font-weight: 600;
+}
+
+.suggestion-description {
+    color: #6a737d;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.suggestion-item.selected .suggestion-description {
+    color: #586069;
+}
+
+/* Scrollbar styling */
+.suggestion-dropdown::-webkit-scrollbar {
+    width: 8px;
+}
+
+.suggestion-dropdown::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.suggestion-dropdown::-webkit-scrollbar-thumb {
+    background: #d1d5da;
+    border-radius: 4px;
+}
+
+.suggestion-dropdown::-webkit-scrollbar-thumb:hover {
+    background: #959da5;
+}

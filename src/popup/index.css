@@ -1,0 +1,61 @@
+:root {
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --background: #f8fafc;
+    --card-bg: #ffffff;
+    --text: #1e293b;
+    --text-light: #64748b;
+    --border: #e2e8f0;
+    --error: #ef4444;
+    --header-height: 56px;
+    --surface: #ffffff;
+    --muted: #f1f5f9;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* Critical CSS: Prevent 0x0 flash on popup open */
+html,
+body {
+    margin: 0;
+    padding: 0;
+    min-width: 420px;
+    min-height: 200px;
+    background-color: var(--background);
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--text);
+    width: 420px;
+}
+
+#root {
+    min-width: 420px;
+    min-height: 200px;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    max-height: 600px;
+    /* Chrome extension popup limit */
+    background: var(--background);
+    transition: min-height 0.2s ease;
+}
+
+.app-container.modal-open {
+    min-height: 450px;
+}
+
+.app-main {
+    overflow-y: auto;
+    padding: 1rem;
+    scrollbar-gutter: stable;
+    flex: 1;
+    /* Take remaining space */
+}

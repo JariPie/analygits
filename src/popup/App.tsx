@@ -1,0 +1,248 @@
+import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import MetadataFetcher from './components/MetadataFetcher'
+import GitHubPanel from './components/GitHubPanel'
+import StoryViewer from './components/StoryViewer'
+import { parseSacStory, type ParsedStoryContent } from './utils/sacParser'
+import TopBar from './components/TopBar'
+import SettingsModal from './components/SettingsModal'
+import { useLanguagePreference } from './hooks/useLanguagePreference'
+import './index.css'
+import './components/Card.css'
+import './components/Button.css'
+
+function App() {
+  const { t } = useTranslation();
+
+  const { language, setLanguage, isLoaded: isLanguageLoaded } = useLanguagePreference();
+
+  const [loading, setLoading] = useState(false)
+  const [parsedContent, setParsedContent] = useState<ParsedStoryContent | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [url, setUrl] = useState('');
+  const [storyId, setStoryId] = useState('');
+  const [storyName, setStoryName] = useState('');
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const [isStorageLoaded, setIsStorageLoaded] = useState(false);
+
+  useEffect(() => {
+    chrome.storage.local.get(['lastUrl', 'lastStoryId', 'lastStoryName'], (result) => {
+      if (result.lastUrl) setUrl(result.lastUrl as string);
+      if (result.lastStoryId) setStoryId(result.lastStoryId as string);
+      if (result.lastStoryName) setStoryName(result.lastStoryName as string);
+      setIsStorageLoaded(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (isStorageLoaded) {
+      chrome.storage.local.set({ lastUrl: url, lastStoryId: storyId, lastStoryName: storyName });
+    }
+  }, [url, storyId, storyName, isStorageLoaded]);
+
+  useEffect(() => {
+    if (isStorageLoaded) {
+      if (parsedContent) {
+        chrome.storage.local.set({ parsedContent });
+      }
+    }
+  }, [parsedContent, isStorageLoaded]);
+
+
+  useEffect(() => {
+    if (!isStorageLoaded) return;
+
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const currentTab = tabs[0];
+      if (currentTab && currentTab.url) {
+        const urlObj = new URL(currentTab.url);
+
+        let storyIdParam = urlObj.searchParams.get("storyId");
+
+        if (!storyIdParam && urlObj.hash) {
+          const hashMatch = urlObj.hash.match(/\/s2\/([A-Z0-9]+)/);
+          if (hashMatch && hashMatch[1]) {
+            storyIdParam = hashMatch[1];
+          }
+        }
+
+        if (storyIdParam) {
+          if (currentTab.title) {
+            let cleanTitle = currentTab.title;
+            cleanTitle = cleanTitle.replace(" - SAP Analytics Cloud", "");
+            cleanTitle = cleanTitle.replace(" - Stories", "");
+            cleanTitle = cleanTitle.trim();
+            setStoryName(cleanTitle);
+          }
+
+          setStoryId((prev) => {
+            if (prev !== storyIdParam) {
+              return storyIdParam || "";
+            }
+            return prev;
+          });
+
+          const tenantId = urlObj.searchParams.get("tenant") || "5";
+          const apiBase = `${urlObj.origin}/sap/fpa/services/rest/epm/contentlib?tenant=${tenantId}`;
+
+          setUrl((prev) => {
+            if (prev !== apiBase) {
+              return apiBase;
+            }
+            return prev;
+          });
+        }
+      }
+    });
+  }, [isStorageLoaded]);
+
+  const handleFetch = async (fetchUrl: string, fetchStoryId?: string): Promise<ParsedStoryContent | null> => {
+    setLoading(true)
+    setError(null)
+    // Don't clear parsedContent here to prevent unmounting GitHubPanel during refresh
+    // setParsedContent(null)
+
+    try {
+      interface FetchOptions {
+        type: string;
+        url: string;
+        method?: string;
+        body?: Record<string, unknown>;
+      }
+
+      let fetchOptions: FetchOptions = { type: "FETCH_DATA", url: fetchUrl };
+
+      if (fetchStoryId) {
+        fetchOptions.method = "POST";
+        fetchOptions.body = {
+          "action": "getContent",
+          "data": {
+            "resourceType": "STORY",
+            "resourceId": fetchStoryId,
+            "oOpt": {
+              "fetchDefaultBookmark": true,
+              "sTranslationLocale": "en",
+              "propertyBag": true,
+              "presentationId": fetchStoryId,
+              "isStory": true,
+              "isStory2": true,
+              "fetchTheme": true,
+              "fetchComposite": true,
+              "optimized": true
+            },
+            "bIncDependency": false
+          }
+        };
+      }
+
+      const response = await chrome.runtime.sendMessage(fetchOptions);
+
+      if (!response.ok) {
+        throw new Error(response.error);
+      }
+
+      const parsed = parseSacStory(response.data);
+      setParsedContent(parsed);
+      return parsed;
+
+    } catch (error: unknown) {
+      console.error(error);
+      let errorMessage = error instanceof Error ? error.message : String(error);
+
+      const errorMap: Record<string, string> = {
+        "SAC_SESSION_TIMEOUT": "app.errors.sacSessionTimeout",
+        "SAC_PARSE_FAILED": "app.errors.sacParseFailed",
+        "SAC_EMPTY_RESPONSE": "app.errors.sacEmptyResponse"
+      };
+
+      if (errorMap[errorMessage]) {
+        errorMessage = t(errorMap[errorMessage]);
+      }
+
+      setError(errorMessage);
+      return null;
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const isStoryLoaded = !!parsedContent;
+  const isDifferentStory = isStoryLoaded && storyId && parsedContent?.id !== storyId;
+
+  const handleRefresh = () => {
+    const customStoryId = isDifferentStory ? storyId : (parsedContent?.id || storyId);
+    handleFetch(url, customStoryId);
+  };
+
+  const fetchLatestStory = async (): Promise<ParsedStoryContent | null> => {
+    const customStoryId = isDifferentStory ? storyId : (parsedContent?.id || storyId);
+    return await handleFetch(url, customStoryId);
+  };
+
+  // Block render until essential initialization is complete
+  // This prevents the brief "small popup" flash during async loading
+  if (!isStorageLoaded || !isLanguageLoaded) {
+    return null;
+  }
+
+  return (
+    <div className={`app-container ${isSettingsOpen ? 'modal-open' : ''}`}>
+      <TopBar
+        onOpenSettings={() => setIsSettingsOpen(true)}
+      />
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        currentLanguage={language}
+        onLanguageChange={setLanguage}
+      />
+
+      <main className="app-main">
+        {/* New Story Alert */}
+        {isDifferentStory && (
+          <div className="new-story-alert">
+            <div className="new-story-info">
+              {t('app.actions.newStoryDetected', { name: storyName || storyId })}
+            </div>
+            <button className="new-story-btn" onClick={() => handleFetch(url, storyId)}>
+              {t('app.actions.fetchNewStory')}
+            </button>
+          </div>
+        )}
+
+        {/* Main Fetcher - Hide if loaded */}
+        {(!isStoryLoaded) && (
+          <div className="card">
+            <MetadataFetcher
+              onFetch={handleFetch}
+              isLoading={loading}
+              url={url}
+              storyId={storyId}
+              storyName={storyName}
+            />
+            {error && <div className="error-message">{error}</div>}
+          </div>
+        )}
+
+        {/* Error when re-fetching/refreshing while loaded */}
+        {isStoryLoaded && error && (
+          <div className="card">
+            <div className="error-message">{error}</div>
+          </div>
+        )}
+
+        {isStoryLoaded && (
+          <div className="content-stack">
+            <StoryViewer content={parsedContent} onRefresh={handleRefresh} />
+            <GitHubPanel parsedContent={parsedContent} onFetchLatest={fetchLatestStory} />
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
+
+export default App

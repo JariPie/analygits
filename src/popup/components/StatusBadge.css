@@ -1,0 +1,71 @@
+/* ============================================
+   GitHub Status Badge (Restored & Adapted)
+   ============================================ */
+.github-status-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.github-logo-container {
+    position: relative;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s;
+}
+
+.github-logo-container:hover {
+    opacity: 0.8;
+}
+
+.github-logo {
+    width: 20px;
+    height: 20px;
+    color: var(--text);
+}
+
+.status-indicator {
+    position: absolute;
+    bottom: -1px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1.5px solid var(--card-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0;
+    /* Hide text icon inside dot for cleaner look */
+    overflow: hidden;
+}
+
+/* Ensure the dot color is set via inline style or modifier classes */
+.status-indicator>* {
+    display: none;
+    /* Hide the text icon (●/○) if we just want color dot */
+}
+
+.disconnect-btn {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 10px;
+    width: 16px;
+    height: 16px;
+    margin-left: 2px;
+    transition: all 0.2s;
+}
+
+.disconnect-btn:hover {
+    background: #fee2e2;
+    color: var(--error);
+}

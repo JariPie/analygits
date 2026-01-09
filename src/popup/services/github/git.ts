@@ -135,6 +135,7 @@ export async function listBranches(
             Accept: 'application/vnd.github+json',
             'X-GitHub-Api-Version': '2022-11-28',
         },
+        cache: 'no-store',
     });
 
     if (!response.ok) {

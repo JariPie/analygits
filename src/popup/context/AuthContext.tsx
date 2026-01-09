@@ -40,6 +40,9 @@ const PERSISTENT_STORAGE_KEY = 'analygits_auth';
 // Storage key for ephemeral auth (access token) - uses session storage when available
 const SESSION_STORAGE_KEY = 'analygits_session';
 
+// Refresh access token 1 minute before actual expiry to avoid race conditions
+const ACCESS_TOKEN_EXPIRY_BUFFER_MS = 60000;
+
 // Environment detection
 const IS_DEV = typeof chrome !== 'undefined' &&
     chrome.runtime?.getManifest &&
@@ -284,7 +287,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const getAccessToken = useCallback(async (): Promise<string> => {
         // Check if cached token is still valid
         if (state.accessToken && state.accessTokenExpiry) {
-            if (!isTokenExpired(state.accessTokenExpiry, 60000)) { // 1 minute buffer
+            if (!isTokenExpired(state.accessTokenExpiry, ACCESS_TOKEN_EXPIRY_BUFFER_MS)) {
                 return state.accessToken;
             }
             debugLog('Access token expired, refreshing');

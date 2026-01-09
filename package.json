@@ -1,7 +1,7 @@
 {
   "name": "analygits",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
-    "package": "npm run build && cd dist && zip -r ../analygits-v1.0.0.zip ."
+    "package": "npm run build && cd dist && zip -r ../analygits-v1.0.1.zip ."
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.4",

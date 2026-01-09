@@ -11,6 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] - 2026-01-09
+
+### Added
+
+- Branch selector dropdown to switch between repository branches
+- Ability to create new branches directly from the extension
+
+### Changed
+
+- Internal code quality improvements (extracted magic numbers to named constants)
+
+---
+
 ## [1.0.0] - 2025-12-21
 
 ### Added
@@ -113,5 +126,6 @@ For future major versions, upgrade instructions will be provided here.
 - [Issue Tracker](https://github.com/JariPie/analygits/issues)
 - [Chrome Web Store](https://chrome.google.com/webstore/detail/analygits/EXTENSION_ID)
 
-[Unreleased]: https://github.com/JariPie/analygits/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/JariPie/analygits/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/JariPie/analygits/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/JariPie/analygits/releases/tag/v1.0.0

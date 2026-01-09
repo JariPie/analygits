@@ -407,7 +407,6 @@ Chrome's background script handles:
 | `getContent(storyId)` | Fetches full story content including scripts, widgets, and metadata |
 | `updateContent(params)` | Saves modified story content back to SAC |
 | `extractStoryContent(cdata)` | Extracts the actual content object from SAC's wrapper structure |
-| `testNoOpSave(storyId)` | Debug function to test save capability without changes |
 
 #### `revertPatch.ts` - Revert Functionality
 

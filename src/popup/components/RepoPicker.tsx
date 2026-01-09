@@ -3,15 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { listRepositories, listBranches, createBranch, type Repository, type Branch } from '../services/github';
 import CustomSelect from './CustomSelect';
-
-// Branch name validation: alphanumeric, underscores, hyphens, slashes (no leading/trailing slashes)
-const BRANCH_NAME_REGEX = /^[a-zA-Z0-9_\-/]+$/;
+import { GIT_BRANCH_PATTERN } from '../../utils/security';
 
 function isValidBranchName(name: string): boolean {
     if (!name || name.startsWith('/') || name.endsWith('/')) {
         return false;
     }
-    return BRANCH_NAME_REGEX.test(name);
+    return GIT_BRANCH_PATTERN.test(name);
 }
 
 interface RepoPickerProps {

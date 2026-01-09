@@ -27,7 +27,7 @@ const GITHUB_REPO_PATTERN = /^[a-zA-Z0-9_][a-zA-Z0-9._-]{0,99}$/;
  * Rules: No spaces, no special chars except /-_, no consecutive dots,
  * cannot start with -, cannot end with .lock
  */
-const GIT_BRANCH_PATTERN = /^(?!-)(?!.*\.\.)(?!.*\.lock$)[a-zA-Z0-9/_-]{1,255}$/;
+export const GIT_BRANCH_PATTERN = /^(?!-)(?!.*\.\.)(?!.*\.lock$)[a-zA-Z0-9/_-]{1,255}$/;
 
 /**
  * Valid SHA pattern (Git commit/blob SHA)

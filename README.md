@@ -137,6 +137,10 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed technical documentation incl
 - SAC API integration details
 - Security considerations
 
+## Changelog
+
+See [Changelog.md](Changelog.md) for version history and release notes.
+
 ## Contributing
 
 We welcome contributions! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:

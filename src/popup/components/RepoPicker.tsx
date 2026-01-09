@@ -1,8 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { listRepositories, type Repository } from '../services/github';
+import { listRepositories, listBranches, createBranch, type Repository, type Branch } from '../services/github';
 import CustomSelect from './CustomSelect';
+
+// Branch name validation: alphanumeric, underscores, hyphens, slashes (no leading/trailing slashes)
+const BRANCH_NAME_REGEX = /^[a-zA-Z0-9_\-\/]+$/;
+
+function isValidBranchName(name: string): boolean {
+    if (!name || name.startsWith('/') || name.endsWith('/')) {
+        return false;
+    }
+    return BRANCH_NAME_REGEX.test(name);
+}
 
 interface RepoPickerProps {
     onRepoChange?: (repo: Repository | null) => void;
@@ -12,24 +22,30 @@ interface RepoPickerProps {
 const RepoPicker: React.FC<RepoPickerProps> = ({ onRepoChange, onRefresh }) => {
     const { t } = useTranslation();
     const { status, getAccessToken, selectedRepo, selectRepo, branch, setBranch } = useAuth();
+
     const [repositories, setRepositories] = useState<Repository[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [branchesLoading, setBranchesLoading] = useState(false);
+    const [branchesError, setBranchesError] = useState<string | null>(null);
+
+    const [isCreatingBranch, setIsCreatingBranch] = useState(false);
+    const [newBranchName, setNewBranchName] = useState('');
+    const [createLoading, setCreateLoading] = useState(false);
+    const [createError, setCreateError] = useState<string | null>(null);
+
     useEffect(() => {
         if (status !== 'connected') return;
 
-        console.log('🔄 RepoPicker: useEffect triggered', { status });
-
         const fetchRepos = async () => {
-            console.log('🚀 RepoPicker: Fetching repos...');
             setLoading(true);
             setError(null);
             try {
                 const token = await getAccessToken();
                 const repos = await listRepositories(token);
                 setRepositories(repos);
-                console.log('✅ RepoPicker: Repos loaded', repos.length);
             } catch (err: unknown) {
                 console.error('❌ RepoPicker: Fetch failed', err);
                 setError(err instanceof Error ? err.message : 'Failed to load repositories');
@@ -41,6 +57,36 @@ const RepoPicker: React.FC<RepoPickerProps> = ({ onRepoChange, onRefresh }) => {
         fetchRepos();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [status]); // Depend only on status to avoid loop from getAccessToken recreation
+
+    useEffect(() => {
+        if (status !== 'connected' || !selectedRepo) {
+            setBranches([]);
+            return;
+        }
+
+        const fetchBranches = async () => {
+            setBranchesLoading(true);
+            setBranchesError(null);
+            try {
+                const token = await getAccessToken();
+                const branchList = await listBranches(token, selectedRepo.owner.login, selectedRepo.name);
+                setBranches(branchList);
+
+
+                if (!branch && selectedRepo.default_branch) {
+                    setBranch(selectedRepo.default_branch);
+                }
+            } catch (err: unknown) {
+                console.error('❌ RepoPicker: Branch fetch failed', err);
+                setBranchesError(err instanceof Error ? err.message : 'Failed to load branches');
+            } finally {
+                setBranchesLoading(false);
+            }
+        };
+
+        fetchBranches();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedRepo, status]);
 
     const handleRepoChange = (value: string) => {
         if (!value) {
@@ -56,14 +102,77 @@ const RepoPicker: React.FC<RepoPickerProps> = ({ onRepoChange, onRefresh }) => {
         }
     };
 
-    const handleBranchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setBranch(e.target.value);
+    const handleBranchChange = (value: string) => {
+        if (value === '__create__') {
+            setIsCreatingBranch(true);
+            setNewBranchName('');
+            setCreateError(null);
+            // Don't call setBranch - keep the previous branch selected
+            return;
+        }
+        setBranch(value);
+    };
+
+    const handleCreateBranch = async () => {
+        if (!selectedRepo || !newBranchName) return;
+
+        if (!isValidBranchName(newBranchName)) {
+            setCreateError(t('repo.errors.errorInvalidBranchName'));
+            return;
+        }
+
+        if (branches.some(b => b.name === newBranchName)) {
+            setCreateError(t('repo.errors.errorBranchExists'));
+            return;
+        }
+
+        setCreateLoading(true);
+        setCreateError(null);
+
+        try {
+            const token = await getAccessToken();
+            await createBranch(
+                token,
+                selectedRepo.owner.login,
+                selectedRepo.name,
+                newBranchName,
+                selectedRepo.default_branch
+            );
+
+            const branchList = await listBranches(token, selectedRepo.owner.login, selectedRepo.name);
+            setBranches(branchList);
+
+            setBranch(newBranchName);
+
+            setIsCreatingBranch(false);
+            setNewBranchName('');
+        } catch (err: unknown) {
+            console.error('❌ RepoPicker: Create branch failed', err);
+            setCreateError(err instanceof Error ? err.message : t('repo.errors.errorCreateFailed'));
+        } finally {
+            setCreateLoading(false);
+        }
+    };
+
+    const handleCancelCreate = () => {
+        setIsCreatingBranch(false);
+        setNewBranchName('');
+        setCreateError(null);
     };
 
     const repoOptions = repositories.map(repo => ({
         value: repo.full_name,
         label: `${repo.full_name}${repo.private ? ' 🔒' : ''}`
     }));
+
+    const branchOptions = [
+        { value: '', label: t('repo.placeholders.selectBranch') },
+        ...branches.map(b => ({
+            value: b.name,
+            label: b.name + (b.protected ? ' 🔒' : '')
+        })),
+        { value: '__create__', label: t('repo.labels.createBranch') }
+    ];
 
     if (status !== 'connected') {
         return null;
@@ -124,15 +233,49 @@ const RepoPicker: React.FC<RepoPickerProps> = ({ onRepoChange, onRefresh }) => {
 
                 {selectedRepo && (
                     <div className="form-group" style={{ marginTop: '0.75rem' }}>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-light)', marginBottom: '0.25rem' }}>{t('repo.labels.branch')}</div>
-                        <input
-                            id="branch-input"
-                            type="text"
-                            value={branch}
-                            onChange={handleBranchChange}
-                            placeholder={t('repo.placeholders.branch')}
-                            className="branch-input"
-                        />
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-light)', marginBottom: '0.25rem' }}>
+                            {t('repo.labels.branch')}
+                        </div>
+                        {branchesLoading ? (
+                            <div className="loading-spinner">{t('repo.status.loadingBranches')}</div>
+                        ) : branchesError ? (
+                            <div className="error-message">{branchesError}</div>
+                        ) : (
+                            <CustomSelect
+                                value={branch}
+                                onChange={handleBranchChange}
+                                options={branchOptions}
+                            />
+                        )}
+
+                        {isCreatingBranch && (
+                            <div className="branch-create-form">
+                                <input
+                                    type="text"
+                                    value={newBranchName}
+                                    onChange={(e) => setNewBranchName(e.target.value)}
+                                    placeholder={t('repo.placeholders.newBranchPlaceholder')}
+                                    disabled={createLoading}
+                                />
+                                <button
+                                    className="btn-create"
+                                    onClick={handleCreateBranch}
+                                    disabled={createLoading || !newBranchName}
+                                >
+                                    {createLoading ? t('repo.status.creatingBranch') : t('repo.labels.createButton')}
+                                </button>
+                                <button
+                                    className="btn-cancel"
+                                    onClick={handleCancelCreate}
+                                    disabled={createLoading}
+                                >
+                                    {t('repo.labels.cancelButton')}
+                                </button>
+                            </div>
+                        )}
+                        {createError && (
+                            <div className="branch-create-error">{createError}</div>
+                        )}
                     </div>
                 )}
             </div>

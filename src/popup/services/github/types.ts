@@ -49,10 +49,14 @@ export interface CommitResult {
     htmlUrl: string;
 }
 
-/** Internal type for Git tree operations */
 export interface GitTreeItem {
     path: string;
     mode: string;
     type: 'blob' | 'tree';
     sha: string | null; // null for deletions
+}
+
+export interface Branch {
+    name: string;
+    protected: boolean;
 }

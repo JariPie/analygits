@@ -71,14 +71,26 @@
     "repo": {
         "labels": {
             "repository": "Repository",
-            "branch": "Branch"
+            "branch": "Branch",
+            "createBranch": "+ Create new branch",
+            "createButton": "Create",
+            "cancelButton": "Cancel"
         },
         "placeholders": {
             "selectRepo": "Select a repository...",
-            "branch": "main"
+            "selectBranch": "Select branch...",
+            "branch": "main",
+            "newBranchPlaceholder": "new-branch-name"
         },
         "status": {
-            "loadingRepos": "Loading repositories..."
+            "loadingRepos": "Loading repositories...",
+            "loadingBranches": "Loading branches...",
+            "creatingBranch": "Creating..."
+        },
+        "errors": {
+            "errorBranchExists": "Branch already exists",
+            "errorInvalidBranchName": "Invalid branch name",
+            "errorCreateFailed": "Failed to create branch"
         }
     },
     "statusBadge": {

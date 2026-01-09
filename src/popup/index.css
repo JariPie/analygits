@@ -59,3 +59,11 @@ body {
     flex: 1;
     /* Take remaining space */
 }
+
+.content-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding-bottom: 2rem;
+    /* Buffer space at the bottom */
+}

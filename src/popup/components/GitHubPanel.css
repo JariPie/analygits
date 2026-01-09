@@ -61,3 +61,52 @@
     font-size: 0.9rem;
     background: white;
 }
+
+.branch-create-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.branch-create-form input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.branch-create-form button {
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border: 1px solid var(--border);
+}
+
+.branch-create-form .btn-create {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.branch-create-form .btn-create:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.branch-create-form .btn-cancel {
+    background: white;
+    color: var(--text);
+}
+
+.branch-create-form .btn-cancel:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.branch-create-error {
+    color: var(--error, #dc3545);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}

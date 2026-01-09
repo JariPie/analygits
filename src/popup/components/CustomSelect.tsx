@@ -23,7 +23,6 @@ export default function CustomSelect({ value, onChange, options }: CustomSelectP
         setIsOpen(false);
     };
 
-    // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -33,11 +32,29 @@ export default function CustomSelect({ value, onChange, options }: CustomSelectP
 
         if (isOpen) {
             document.addEventListener('mousedown', handleClickOutside);
-        }
 
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
+            const timer = setTimeout(() => {
+                const dropdown = containerRef.current?.querySelector('.custom-select-dropdown') as HTMLElement;
+                if (dropdown) {
+                    const rect = dropdown.getBoundingClientRect();
+                    const appMain = document.querySelector('.app-main');
+
+                    if (appMain) {
+                        const containerRect = appMain.getBoundingClientRect();
+                        const buffer = 10;
+
+                        if (rect.bottom + buffer > containerRect.bottom) {
+                            const scrollAmount = rect.bottom + buffer - containerRect.bottom;
+                            appMain.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+                        }
+                    }
+                }
+            }, 100);
+            return () => {
+                document.removeEventListener('mousedown', handleClickOutside);
+                clearTimeout(timer);
+            };
+        }
     }, [isOpen]);
 
     return (

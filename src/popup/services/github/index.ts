@@ -1,4 +1,3 @@
-// Types
 export type {
     HandshakePollResponse,
     TokenResponse,
@@ -7,12 +6,11 @@ export type {
     FileDiff,
     GitHubUser,
     CommitResult,
+    Branch,
 } from './types';
 
-// Utilities
 export { generateSessionId } from './utils';
 
-// Authentication
 export {
     getInstallUrl,
     pollHandshake,
@@ -22,10 +20,11 @@ export {
     clearCachedUserProfile,
 } from './auth';
 
-// Git Operations
 export {
     listRepositories,
     getRepoTree,
     getFileContent,
     pushChanges,
+    listBranches,
+    createBranch,
 } from './git';

@@ -30,7 +30,7 @@ AnalyGits solves this by extracting scripts and metadata from SAC stories and sy
 ### From Chrome Web Store (Recommended)
 
 <!-- Update this link once published -->
-[Install AnalyGits](https://chrome.google.com/webstore/detail/analygits/EXTENSION_ID)
+[Install AnalyGits](https://chrome.google.com/webstore/detail/analygits/ccjmdkkckgibhbkielohlnglodeoemam)
 
 ### Manual Installation (Development)
 

@@ -7,14 +7,10 @@ import {
 } from '../../../utils/security';
 import { fetchWithTimeout } from './utils';
 import { getUserProfile } from './auth';
-import type { Repository, TreeItem, FileDiff, CommitResult, GitTreeItem } from './types';
-
-
+import type { Repository, TreeItem, FileDiff, CommitResult, GitTreeItem, Branch } from './types';
 
 let commitInFlight = false;
 let lastCommitHash: string | null = null;
-
-
 
 async function computeCommitHash(message: string, diffs: FileDiff[]): Promise<string> {
     const parts: string[] = [message];
@@ -34,8 +30,6 @@ async function computeCommitHash(message: string, diffs: FileDiff[]): Promise<st
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
-
-
 
 export async function listRepositories(accessToken: string): Promise<Repository[]> {
     if (!accessToken || typeof accessToken !== 'string') {
@@ -57,8 +51,6 @@ export async function listRepositories(accessToken: string): Promise<Repository[
     const data = await response.json();
     return data.repositories as Repository[];
 }
-
-
 
 export async function getRepoTree(
     accessToken: string,
@@ -122,7 +114,81 @@ export async function getFileContent(
     return response.text();
 }
 
+/**
+ * Note: No pagination - assumes max 30 branches per repo
+ */
+export async function listBranches(
+    accessToken: string,
+    owner: string,
+    repo: string
+): Promise<Branch[]> {
+    const validation = validateGitHubParams({ owner, repo });
+    if (!validation.valid) {
+        throw new ValidationError('params', validation.errors.join('; '));
+    }
 
+    const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches`;
+
+    const response = await fetchWithTimeout(url, {
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+        },
+    });
+
+    if (!response.ok) {
+        throw new ApiError(response.status, response.statusText, 'Failed to list branches');
+    }
+
+    const data = await response.json();
+    return data as Branch[];
+}
+
+export async function createBranch(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    branchName: string,
+    baseBranch: string
+): Promise<{ name: string; sha: string }> {
+    const validation = validateGitHubParams({ owner, repo, branch: branchName });
+    if (!validation.valid) {
+        throw new ValidationError('params', validation.errors.join('; '));
+    }
+
+    // Get the SHA of the base branch
+    const baseRef = await getRef(accessToken, owner, repo, baseBranch);
+
+    const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/refs`;
+
+    const response = await fetchWithTimeout(url, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            ref: `refs/heads/${branchName}`,
+            sha: baseRef.sha,
+        }),
+    });
+
+    if (!response.ok) {
+        if (response.status === 422) {
+            throw new ApiError(response.status, response.statusText, 'Branch already exists');
+        }
+        throw new ApiError(response.status, response.statusText, 'Failed to create branch');
+    }
+
+    const data = await response.json();
+    return {
+        name: branchName,
+        sha: data.object.sha,
+    };
+}
 
 async function createBlob(
     accessToken: string,
@@ -268,8 +334,6 @@ async function updateRef(
     }
 }
 
-
-
 export async function pushChanges(
     accessToken: string,
     owner: string,
@@ -357,8 +421,6 @@ export async function pushChanges(
         commitInFlight = false;
     }
 }
-
-
 
 export function _resetState(): void {
     commitInFlight = false;

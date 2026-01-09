@@ -236,7 +236,7 @@ export function extractStoryDetails(innerContent: any): {
                                     soId = parsedId[0].scriptObject;
                                 }
                             }
-                        } catch (e) { /* ignore parse error */ }
+                        } catch (_e) { /* ignore parse error */ }
 
                         // Resolve Name: Check instanceId (complex) first, then extracted GUID
                         if (nameMap[so.instanceId]) {
@@ -358,7 +358,7 @@ export function extractStoryDetails(innerContent: any): {
                                 }
                             }
                         }
-                    } catch (e) { /* ignore */ }
+                    } catch (_e) { /* ignore */ }
                 }
 
                 Object.entries(handlers).forEach(([eventName, code]) => {
@@ -375,7 +375,7 @@ export function extractStoryDetails(innerContent: any): {
             const scanForEvents = (entityList: any[]) => {
                 entityList.forEach(entity => {
                     if (entity.events) {
-                        let evts = entity.events;
+                        const evts = entity.events;
                         if (Array.isArray(evts)) {
                             evts.forEach(e => {
                                 events.push({
@@ -398,7 +398,7 @@ export function extractStoryDetails(innerContent: any): {
                     }
                     // Check if nested in data too
                     if (entity.data && entity.data.events) {
-                        let evts = entity.data.events;
+                        const evts = entity.data.events;
                         if (Array.isArray(evts)) {
                             evts.forEach(e => {
                                 events.push({
@@ -446,7 +446,7 @@ export function parseSacStory(jsonString: string): ParsedStoryContent {
     try {
         data = JSON.parse(jsonString);
         devLog('sacParser', 'Parsed SAC Response:', data);
-    } catch (e) {
+    } catch (_e) {
         devError('sacParser', 'Raw response:', jsonString);
 
         // Check for HTML / Timeout indicators in the raw response
@@ -497,7 +497,7 @@ export function parseSacStory(jsonString: string): ParsedStoryContent {
     } else {
         try {
             innerContent = JSON.parse(resource.cdata.content);
-        } catch (e) {
+        } catch (_e) {
             devWarn('sacParser', 'Failed to parse inner content JSON. Returning raw string.');
             innerContent = resource.cdata.content;
         }

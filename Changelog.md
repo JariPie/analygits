@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Internal code quality improvements (extracted magic numbers to named constants)
+- Resolved various linting issues (unused imports, variable scoping, and regex optimizations)
 
 ---
 

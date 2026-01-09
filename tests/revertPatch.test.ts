@@ -4,7 +4,7 @@ import {
     parseGitHubScriptPath,
     patchStoryContentWithGitHubFile,
     removeContentFromStory,
-    type PatchTarget
+
 } from '../src/sac/revertPatch';
 
 // Mock dependencies

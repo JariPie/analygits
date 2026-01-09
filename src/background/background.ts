@@ -47,7 +47,7 @@ function isAllowedSacUrl(url: string): boolean {
         }
 
         return isAllowed;
-    } catch (e) {
+    } catch (_e) {
         securityLog('URL rejected: invalid URL format', url);
         return false;
     }
@@ -416,7 +416,7 @@ async function handleSacFetch(
                         }
                     });
                     return resp.headers.get("x-csrf-token");
-                } catch (e) {
+                } catch (_e) {
                     debugLog(`CSRF fetch failed for ${targetUrl}`);
                     return null;
                 }
@@ -431,7 +431,7 @@ async function handleSacFetch(
                     const origin = new URL(url).origin;
                     debugLog("CSRF fetch failed for URL, retrying with origin");
                     token = await fetchCsrfToken(origin + "/");
-                } catch (e) {
+                } catch (_e) {
                     console.error("[Background] Could not determine origin for CSRF fallback");
                 }
             }

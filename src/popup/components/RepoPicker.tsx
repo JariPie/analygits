@@ -5,7 +5,7 @@ import { listRepositories, listBranches, createBranch, type Repository, type Bra
 import CustomSelect from './CustomSelect';
 
 // Branch name validation: alphanumeric, underscores, hyphens, slashes (no leading/trailing slashes)
-const BRANCH_NAME_REGEX = /^[a-zA-Z0-9_\-\/]+$/;
+const BRANCH_NAME_REGEX = /^[a-zA-Z0-9_\-/]+$/;
 
 function isValidBranchName(name: string): boolean {
     if (!name || name.startsWith('/') || name.endsWith('/')) {

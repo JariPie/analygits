@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { buildVirtualStoryTree } from '../src/diff/adapter';
 import type { ParsedStoryContent } from '../src/popup/utils/sacParser';
 
@@ -402,7 +402,7 @@ describe('buildVirtualStoryTree', () => {
             const tree = buildVirtualStoryTree(content);
 
             const file = tree.get('stories/Sales_Dashboard/scripts/widgets/Button/onClick.js');
-            expect(file!.content).not.toMatch(/   \n/);
+            expect(file!.content).not.toMatch(/ {3}\n/);
         });
 
         it('should normalize README.md content', () => {

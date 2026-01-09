@@ -86,6 +86,31 @@ const ScriptObjectItem = ({ scriptObject }: { scriptObject: ScriptObject }) => {
     )
 }
 
+interface SectionHeaderProps {
+    title: string;
+    count: number;
+    sectionKey: string;
+    isExpanded: boolean;
+    onToggle: (key: string) => void;
+}
+
+const SectionHeader: React.FC<SectionHeaderProps> = ({ title, count, sectionKey, isExpanded, onToggle }) => (
+    <div
+        className={`accordion-header ${isExpanded ? 'active' : ''}`}
+        onClick={() => onToggle(sectionKey)}
+    >
+        <div className="accordion-title">
+            <span className="accordion-label">{title}</span>
+            <span className="accordion-count">{count}</span>
+        </div>
+        <div className="accordion-icon" style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: '#94a3b8' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
+    </div>
+);
+
 interface StoryViewerProps {
     content: ParsedStoryContent;
     onRefresh: () => void;
@@ -104,23 +129,6 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ content, onRefresh }) => {
             setExpandedSection(section);
         }
     };
-
-    const SectionHeader = ({ title, count, sectionKey }: { title: string, count: number, sectionKey: string }) => (
-        <div
-            className={`accordion-header ${expandedSection === sectionKey ? 'active' : ''}`}
-            onClick={() => toggleSection(sectionKey)}
-        >
-            <div className="accordion-title">
-                <span className="accordion-label">{title}</span>
-                <span className="accordion-count">{count}</span>
-            </div>
-            <div className="accordion-icon" style={{ transform: expandedSection === sectionKey ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: '#94a3b8' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-            </div>
-        </div>
-    );
 
     return (
         <div className="story-viewer-container card fade-in">
@@ -154,6 +162,8 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ content, onRefresh }) => {
                             title={t('app.sections.pages', { count: content.pages.length }).replace('()', '').trim()}
                             count={content.pages.length}
                             sectionKey="pages"
+                            isExpanded={expandedSection === 'pages'}
+                            onToggle={toggleSection}
                         />
                         {expandedSection === 'pages' && (
                             <div className="accordion-content">
@@ -177,6 +187,8 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ content, onRefresh }) => {
                             title={t('app.sections.globalVars', { count: content.globalVars.length }).replace('()', '').trim()}
                             count={content.globalVars.length}
                             sectionKey="globalVars"
+                            isExpanded={expandedSection === 'globalVars'}
+                            onToggle={toggleSection}
                         />
                         {expandedSection === 'globalVars' && (
                             <div className="accordion-content">
@@ -203,6 +215,8 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ content, onRefresh }) => {
                             title={t('app.sections.scriptObjects', { count: content.scriptObjects.length }).replace('()', '').trim()}
                             count={content.scriptObjects.length}
                             sectionKey="scriptObjects"
+                            isExpanded={expandedSection === 'scriptObjects'}
+                            onToggle={toggleSection}
                         />
                         {expandedSection === 'scriptObjects' && (
                             <div className="accordion-content">
@@ -223,6 +237,8 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ content, onRefresh }) => {
                             title={t('app.sections.events', { count: content.events.length }).replace('()', '').trim()}
                             count={content.events.length}
                             sectionKey="events"
+                            isExpanded={expandedSection === 'events'}
+                            onToggle={toggleSection}
                         />
                         {expandedSection === 'events' && (
                             <div className="accordion-content">

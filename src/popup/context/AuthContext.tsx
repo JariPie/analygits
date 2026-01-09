@@ -347,9 +347,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // ========================================================================
 
     useEffect(() => {
+        const pollingInterval = pollingRef.current;
         return () => {
-            if (pollingRef.current) {
-                clearTimeout(pollingRef.current);
+            if (pollingInterval) {
+                clearTimeout(pollingInterval);
             }
         };
     }, []);
@@ -462,6 +463,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 // HOOK
 // ============================================================================
 
+// eslint-disable-next-line react-refresh/only-export-components -- Context + hook export pattern
 export function useAuth(): AuthContextValue {
     const context = useContext(AuthContext);
     if (!context) {

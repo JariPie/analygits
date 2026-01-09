@@ -21,6 +21,7 @@ export const SuggestionDropdown = forwardRef<SuggestionDropdownRef, SuggestionDr
 
         // Reset selection when items change
         useEffect(() => {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- Valid pattern: resetting state when props change
             setSelectedIndex(0);
         }, [items]);
 

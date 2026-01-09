@@ -13,7 +13,7 @@ import type { ParsedStoryContent } from '../popup/utils/sacParser';
 export function buildVirtualStoryTree(parsedContent: ParsedStoryContent): VirtualTree {
     const tree: VirtualTree = new Map();
 
-    const storyName = parsedContent.name?.replace(/[\s\/]+/g, '_') || 'story';
+    const storyName = parsedContent.name?.replace(/[\s/]+/g, '_') || 'story';
     const basePath = `stories/${storyName}`;
 
     let readme = `# ${parsedContent.name || 'Untitled Story'}\n\n`;
@@ -61,7 +61,7 @@ export function buildVirtualStoryTree(parsedContent: ParsedStoryContent): Virtua
             if (!evt.body) continue;
             const widgetName = evt.widgetName || evt.widgetId || 'UnknownWidget';
             const eventName = evt.eventName || 'unknownEvent';
-            const safeWidgetName = widgetName.replace(/[\s\/]+/g, '_');
+            const safeWidgetName = widgetName.replace(/[\s/]+/g, '_');
 
             const path = `${basePath}/scripts/widgets/${safeWidgetName}/${eventName}.js`;
             tree.set(path, { path, content: normalizeContent(evt.body) });

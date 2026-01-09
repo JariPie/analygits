@@ -31,7 +31,7 @@ export function serializeCommitMessage(doc: JSONContent): string {
 
     let headerLine = '';
     let bodyText = '';
-    let footerLines: string[] = [];
+    const footerLines: string[] = [];
 
     for (const node of doc.content) {
         if (node.type === 'commitHeader') {

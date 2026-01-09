@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { materializeSacScripts } from '../src/diff/materialize';
-import { VirtualTree } from '../src/diff/types';
 
 describe('materializeSacScripts', () => {
     it('should ignore null or invalid input', () => {

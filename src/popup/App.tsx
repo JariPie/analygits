@@ -112,7 +112,7 @@ function App() {
         body?: Record<string, unknown>;
       }
 
-      let fetchOptions: FetchOptions = { type: "FETCH_DATA", url: fetchUrl };
+      const fetchOptions: FetchOptions = { type: "FETCH_DATA", url: fetchUrl };
 
       if (fetchStoryId) {
         fetchOptions.method = "POST";
